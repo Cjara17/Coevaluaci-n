@@ -1,0 +1,18 @@
+body {
+    background-color: #f8f9fa;
+    height: 100vh; /* asegura que el body ocupe toda la altura de la pantalla */
+    margin: 0; /* elimina márgenes predeterminados */
+}
+
+.login-container {
+    height: 100vh;
+    display: flex;
+    align-items: center;    /* centra verticalmente */
+    justify-content: center; /* centra horizontalmente */
+}
+
+.login-card {
+    max-width: 700px; /* ancho más amplio */
+    width: 100%;
+    padding: 2rem; /* espacio interno */
+}
