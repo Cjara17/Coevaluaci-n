@@ -3,8 +3,21 @@ require 'db.php';
 // Requerir ser docente Y tener un curso activo (verificar_sesion lo redirige si falta el curso)
 verificar_sesion(true, true); 
 
+<<<<<<< HEAD
 $id_curso_activo = get_active_course_id();
 $id_docente = $_SESSION['id_usuario'];
+=======
+// Session timeout check and update is handled in db.php
+
+// --- BLOQUE AÑADIR---
+// Cargar la escala de notas en un array para consulta rápida
+$escala_lookup = [];
+$result_escala = $conn->query("SELECT puntaje, nota FROM escala_notas");
+while ($row = $result_escala->fetch_assoc()) {
+    $escala_lookup[$row['puntaje']] = $row['nota'];
+}
+// --- FIN DEL BLOQUE A AÑADIR ---
+>>>>>>> 9f138c1ff81b044a7d1760d461ad8a8128013b70
 
 // 1. OBTENER INFORMACIÓN DEL CURSO ACTIVO (para mostrar el título)
 $stmt_curso = $conn->prepare("SELECT nombre_curso, semestre, anio FROM cursos WHERE id = ?");

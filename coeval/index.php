@@ -23,9 +23,9 @@
                         <form action="login.php" method="POST">
                             <div class="mb-3">
                                 <label for="email" class="form-label">Correo Institucional</label>
-                                <input type="email" class="form-control" id="email" name="email" required placeholder="usuario@alu.uct.cl">
+                                <input type="email" class="form-control" id="email" name="email" required placeholder="usuario@alu.uct.cl o usuario@uct.cl">
                             </div>
-                            
+
                             <div class="mb-3" id="password-field" style="display: none;">
                                 <label for="password" class="form-label">Contraseña</label>
                                 <input type="password" class="form-control" id="password" name="password">
@@ -35,6 +35,10 @@
                                 <button type="submit" class="btn btn-primary">Ingresar</button>
                             </div>
                         </form>
+
+                        <div class="text-center mt-3">
+                            <a href="register_docente.php" class="text-decoration-none">¿Eres docente? Regístrate aquí</a>
+                        </div>
                     </div>
                 </div>
             </div>

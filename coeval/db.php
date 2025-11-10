@@ -10,6 +10,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // ----------------------------
 
+<<<<<<< HEAD
 // Configuración de la Base de Datos
 $servername = "localhost";
 $username = "root"; 
@@ -18,6 +19,27 @@ $username = "root";
 // Si esto no funciona, prueba $password = "root"; de nuevo.
 $password = ""; 
 $dbname = "coeval_db"; // Nombre de la base de datos
+=======
+// Configurable session timeout in seconds (15 minutes)
+$session_timeout = 900;
+
+// Check for session inactivity timeout
+if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $session_timeout)) {
+    // Session has expired due to inactivity
+    session_unset();
+    session_destroy();
+    header("Location: login.php?error=Sesión expirada por inactividad");
+    exit();
+}
+
+// Update last activity time to current timestamp
+$_SESSION['last_activity'] = time();
+
+$servidor = "localhost";
+$usuario_db = "root"; // Cambia por tu usuario de MySQL
+$password_db = ""; // Cambia por tu contraseña de MySQL
+$nombre_db = "coeval_db";
+>>>>>>> 9f138c1ff81b044a7d1760d461ad8a8128013b70
 
 // Crear conexión
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -35,6 +57,7 @@ if ($conn->connect_error) {
     // echo "<h1>✅ CONEXIÓN EXITOSA! ✅</h1>"; 
 }
 
+<<<<<<< HEAD
 // ----------------------------------------------------------------------
 // FUNCIONES DE SEGURIDAD Y CONTEXTO
 // ----------------------------------------------------------------------
@@ -47,10 +70,15 @@ if ($conn->connect_error) {
  */
 function verificar_sesion($requiere_docente = false, $requiere_curso = true) {
     // 1. Verificar sesión activa
+=======
+// Función para redirigir si el usuario no está logueado
+function verificar_sesion($solo_docentes = false) {
+>>>>>>> 9f138c1ff81b044a7d1760d461ad8a8128013b70
     if (!isset($_SESSION['id_usuario'])) {
         header("Location: index.php");
         exit();
     }
+<<<<<<< HEAD
 
     // 2. Verificar rol de docente (si es requerido)
     if ($requiere_docente && (!isset($_SESSION['es_docente']) || !$_SESSION['es_docente'])) {
@@ -67,6 +95,12 @@ function verificar_sesion($requiere_docente = false, $requiere_curso = true) {
             exit();
         }
     }
+=======
+    if ($solo_docentes && (!isset($_SESSION['es_docente']) || !$_SESSION['es_docente'])) {
+        header("Location: index.php");
+        exit();
+    }
+>>>>>>> 9f138c1ff81b044a7d1760d461ad8a8128013b70
 }
 
 /**

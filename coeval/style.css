@@ -16,3 +16,26 @@ body {
     width: 100%;
     padding: 2rem; /* espacio interno */
 }
+
+body {
+  background: linear-gradient(135deg, #0077b6, #00b4d8);
+  color: #333;
+}
+
+.card {
+  border-radius: 15px;
+  border: none;
+}
+
+.btn-primary {
+  background-color: #0077b6;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #023e8a;
+}
+
+.alert {
+  font-size: 0.9rem;
+}
