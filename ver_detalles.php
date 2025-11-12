@@ -1,9 +1,15 @@
 <?php
 require 'db.php';
 // Requerir ser docente Y tener un curso activo
-verificar_sesion(true, true); 
+verificar_sesion(true);
 
-$id_curso_activo = get_active_course_id();
+$id_curso_activo = isset($_SESSION['id_curso_activo']) ? $_SESSION['id_curso_activo'] : null;
+
+if (!$id_curso_activo) {
+    header("Location: select_course.php");
+    exit();
+}
+
 $id_equipo = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if ($id_equipo === 0) {
@@ -121,28 +127,18 @@ if ($num_evaluaciones > 0) {
     }
 }
 
-// ----------------------------------------------------------------------
-// 5. Función para obtener la Nota Final (copiada de dashboard_docente.php)
-// ----------------------------------------------------------------------
-function calcular_nota_final($puntaje, $conn, $id_curso_activo) {
+// Función para obtener la Nota Final basada en puntaje promedio (escala 1-7)
+function calcular_nota_final($puntaje) {
     if ($puntaje === null) return "N/A";
 
-    $stmt = $conn->prepare("
-        SELECT nota FROM escala_notas 
-        WHERE id_curso = ?
-        ORDER BY ABS(puntaje - ?) ASC 
-        LIMIT 1"
-    );
-    $puntaje_redondeado = round($puntaje);
-    $stmt->bind_param("ii", $id_curso_activo, $puntaje_redondeado);
-    $stmt->execute();
-    $resultado = $stmt->get_result();
-
-    if ($resultado->num_rows > 0) {
-        return number_format($resultado->fetch_assoc()['nota'], 1);
-    }
-
-    return "S/E"; // Sin Escala
+    // Escala simple: puntaje de 0-100 a nota de 1.0-7.0
+    $nota = 1.0 + ($puntaje / 100) * 6.0;
+    
+    // Límites mínimo y máximo
+    if ($nota < 1.0) $nota = 1.0;
+    if ($nota > 7.0) $nota = 7.0;
+    
+    return number_format($nota, 1);
 }
 
 // Obtener el puntaje promedio general del equipo
@@ -153,7 +149,7 @@ $stmt_promedio->execute();
 $promedio_general = $stmt_promedio->get_result()->fetch_assoc()['promedio'];
 $stmt_promedio->close();
 
-$nota_final = calcular_nota_final($promedio_general, $conn, $id_curso_activo);
+$nota_final = calcular_nota_final($promedio_general);
 
 ?>
 <!DOCTYPE html>

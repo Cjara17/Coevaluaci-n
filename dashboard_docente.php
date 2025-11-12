@@ -1,23 +1,16 @@
 <?php
 require 'db.php';
-// Requerir ser docente Y tener un curso activo (verificar_sesion lo redirige si falta el curso)
-verificar_sesion(true, true); 
+// Requerir ser docente Y tener un curso activo
+verificar_sesion(true);
 
-<<<<<<< HEAD
-$id_curso_activo = get_active_course_id();
+$id_curso_activo = isset($_SESSION['id_curso_activo']) ? $_SESSION['id_curso_activo'] : null;
 $id_docente = $_SESSION['id_usuario'];
-=======
-// Session timeout check and update is handled in db.php
 
-// --- BLOQUE AÑADIR---
-// Cargar la escala de notas en un array para consulta rápida
-$escala_lookup = [];
-$result_escala = $conn->query("SELECT puntaje, nota FROM escala_notas");
-while ($row = $result_escala->fetch_assoc()) {
-    $escala_lookup[$row['puntaje']] = $row['nota'];
+// Si no tiene curso activo, redirigir a select_course.php
+if (!$id_curso_activo) {
+    header("Location: select_course.php");
+    exit();
 }
-// --- FIN DEL BLOQUE A AÑADIR ---
->>>>>>> 9f138c1ff81b044a7d1760d461ad8a8128013b70
 
 // 1. OBTENER INFORMACIÓN DEL CURSO ACTIVO (para mostrar el título)
 $stmt_curso = $conn->prepare("SELECT nombre_curso, semestre, anio FROM cursos WHERE id = ?");
@@ -44,10 +37,9 @@ $sql_equipos = "
         e.id, 
         e.nombre_equipo, 
         e.estado_presentacion,
-        -- La subconsulta también debe filtrar por el curso
         (SELECT AVG(puntaje_total) FROM evaluaciones_maestro WHERE id_equipo_evaluado = e.id AND id_curso = ?) AS promedio_puntaje
     FROM equipos e
-    WHERE e.id_curso = ? -- Filtramos los equipos por el curso activo
+    WHERE e.id_curso = ?
     ORDER BY e.nombre_equipo ASC";
 
 $stmt_equipos = $conn->prepare($sql_equipos);
@@ -55,29 +47,20 @@ $stmt_equipos->bind_param("ii", $id_curso_activo, $id_curso_activo);
 $stmt_equipos->execute();
 $equipos = $stmt_equipos->get_result();
 
-// Lógica para obtener la nota final (adaptada para usar el id_curso)
-function calcular_nota_final($puntaje, $conn, $id_curso_activo) {
+// Función para calcular nota basada en el puntaje promedio (escala de 1-7)
+function calcular_nota_final($puntaje) {
     if ($puntaje === null) return "N/A";
-
-    // 1. Buscar la nota más cercana en la escala del curso activo
-    $stmt = $conn->prepare("
-        SELECT nota FROM escala_notas 
-        WHERE id_curso = ?
-        ORDER BY ABS(puntaje - ?) ASC 
-        LIMIT 1"
-    );
-    $puntaje_redondeado = round($puntaje);
-    $stmt->bind_param("ii", $id_curso_activo, $puntaje_redondeado);
-    $stmt->execute();
-    $resultado = $stmt->get_result();
-
-    if ($resultado->num_rows > 0) {
-        return number_format($resultado->fetch_assoc()['nota'], 1);
-    }
-
-    return "S/E"; // Sin Escala
+    
+    // Escala simple: puntaje de 0-100 a nota de 1.0-7.0
+    // 100 = 7.0, 0 = 1.0
+    $nota = 1.0 + ($puntaje / 100) * 6.0;
+    
+    // Límites mínimo y máximo
+    if ($nota < 1.0) $nota = 1.0;
+    if ($nota > 7.0) $nota = 7.0;
+    
+    return number_format($nota, 1);
 }
-
 
 $status_message = isset($_GET['status']) ? htmlspecialchars($_GET['status']) : '';
 ?>
@@ -101,7 +84,6 @@ $status_message = isset($_GET['status']) ? htmlspecialchars($_GET['status']) : '
                     <select name="id_curso" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="" disabled selected>Cambiar Curso...</option>
                         <?php 
-                        // Necesitamos resetear el puntero ya que lo usamos para la opción disabled/selected
                         $all_cursos->data_seek(0); 
                         while($curso = $all_cursos->fetch_assoc()): 
                             $selected = $curso['id'] == $id_curso_activo ? 'selected' : '';
@@ -147,24 +129,13 @@ $status_message = isset($_GET['status']) ? htmlspecialchars($_GET['status']) : '
                 <div class="card mb-4">
                     <div class="card-header bg-info text-white">Carga de Datos (Curso Activo)</div>
                     <div class="card-body">
-                        <h5 class="card-title">1. Cargar Lista de Estudiantes y Equipos</h5>
+                        <h5 class="card-title">Cargar Lista de Estudiantes y Equipos</h5>
                         <form action="upload.php" method="POST" enctype="multipart/form-data" class="mb-3">
                             <div class="input-group">
                                 <input type="file" class="form-control" name="lista_estudiantes" id="lista_estudiantes" accept=".csv" required>
                                 <button type="submit" class="btn btn-primary">Subir Estudiantes (CSV)</button>
                             </div>
                             <small class="form-text text-muted">Formato: Nombre, Correo, Nombre_Equipo</small>
-                        </form>
-                        
-                        <hr>
-                        
-                        <h5 class="card-title">2. Cargar Escala de Notas</h5>
-                        <form action="upload_escala.php" method="POST" enctype="multipart/form-data">
-                            <div class="input-group">
-                                <input type="file" class="form-control" name="escala_csv" id="escala_csv" accept=".csv" required>
-                                <button type="submit" class="btn btn-success">Subir Escala (CSV)</button>
-                            </div>
-                             <small class="form-text text-muted">Formato: Puntaje, Nota (Ej: 10,7.0)</small>
                         </form>
                     </div>
                 </div>
@@ -186,7 +157,7 @@ $status_message = isset($_GET['status']) ? htmlspecialchars($_GET['status']) : '
                 <?php if ($equipos->num_rows > 0): ?>
                     <?php while($equipo = $equipos->fetch_assoc()): 
                         $promedio = $equipo['promedio_puntaje'] !== null ? number_format($equipo['promedio_puntaje'], 2) : 'N/A';
-                        $nota = calcular_nota_final($equipo['promedio_puntaje'], $conn, $id_curso_activo);
+                        $nota = calcular_nota_final($equipo['promedio_puntaje']);
                     ?>
                     <tr>
                         <td><?php echo htmlspecialchars($equipo['nombre_equipo']); ?></td>

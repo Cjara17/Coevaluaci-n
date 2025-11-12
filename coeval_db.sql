@@ -3,18 +3,17 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost
--- Tiempo de generación: 10-11-2025 a las 04:02:08
+-- Tiempo de generación: 12-11-2025 a las 00:00:00
 -- Versión del servidor: 10.4.28-MariaDB
 -- Versión de PHP: 8.2.4
 
-DROP DATABASE IF EXISTS `coeval_db`;;
+DROP DATABASE IF EXISTS `coeval_db`;
 CREATE DATABASE `coeval_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `coeval_db`;; 
+USE `coeval_db`;
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
-
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -25,238 +24,176 @@ SET time_zone = "+00:00";
 -- Base de datos: `coeval_db`
 --
 
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `criterios`
---
-
-CREATE TABLE `criterios` (
-  `id` int(11) NOT NULL,
-  `descripcion` text NOT NULL,
-  `orden` int(11) NOT NULL DEFAULT 0,
-  `activo` tinyint(1) NOT NULL DEFAULT 1,
-  `id_curso` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `cursos`
---
-
-CREATE TABLE `cursos` (
-  `id` int(11) NOT NULL,
-  `nombre_curso` varchar(255) NOT NULL,
-  `semestre` varchar(10) NOT NULL COMMENT 'Ej: 2025-1',
-  `anio` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `docente_curso`
---
-
-CREATE TABLE `docente_curso` (
-  `id_docente` int(11) NOT NULL,
-  `id_curso` int(11) NOT NULL,
-  `ponderacion` decimal(3,2) NOT NULL DEFAULT 1.00
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `equipos`
---
-
-CREATE TABLE `equipos` (
-  `id` int(11) NOT NULL,
-  `nombre_equipo` varchar(100) NOT NULL,
-  `estado_presentacion` varchar(20) NOT NULL DEFAULT 'pendiente',
-  `id_curso` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `escala_notas`
---
-
-CREATE TABLE `escala_notas` (
-  `id` int(11) NOT NULL,
-  `puntaje` int(11) NOT NULL,
-  `nota` decimal(3,1) NOT NULL,
-  `id_curso` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `evaluaciones_detalle`
---
-
-CREATE TABLE `evaluaciones_detalle` (
-  `id` int(11) NOT NULL,
-  `id_evaluacion` int(11) NOT NULL,
-  `id_criterio` int(11) NOT NULL,
-  `puntaje` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `evaluaciones_maestro`
---
-
-CREATE TABLE `evaluaciones_maestro` (
-  `id` int(11) NOT NULL,
-  `id_evaluador` int(11) NOT NULL,
-  `id_equipo_evaluado` int(11) NOT NULL,
-  `puntaje_total` int(11) NOT NULL,
-  `fecha_evaluacion` timestamp NULL DEFAULT current_timestamp(),
-  `id_curso` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `usuarios`
---
-
+-- ========================================
+-- TABLA: usuarios
+-- ========================================
 CREATE TABLE `usuarios` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` varchar(255) NOT NULL,
   `email` varchar(191) NOT NULL,
   `id_equipo` int(11) DEFAULT NULL,
   `es_docente` tinyint(1) DEFAULT 0,
   `password` varchar(255) DEFAULT NULL,
-  `id_curso` int(11) DEFAULT NULL
+  `id_curso` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`),
+  KEY `id_equipo` (`id_equipo`),
+  KEY `idx_id_curso` (`id_curso`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Índices para tablas volcadas
---
+-- ========================================
+-- TABLA: cursos
+-- ========================================
+CREATE TABLE `cursos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombre_curso` varchar(255) NOT NULL,
+  `semestre` varchar(10) NOT NULL COMMENT 'Ej: 2025-1',
+  `anio` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_semestre_anio` (`nombre_curso`,`semestre`,`anio`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Indices de la tabla `criterios`
---
-ALTER TABLE `criterios`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `id_curso` (`id_curso`);
+-- ========================================
+-- TABLA: docente_curso
+-- ========================================
+CREATE TABLE `docente_curso` (
+  `id_docente` int(11) NOT NULL,
+  `id_curso` int(11) NOT NULL,
+  `ponderacion` decimal(3,2) NOT NULL DEFAULT 1.00,
+  PRIMARY KEY (`id_docente`,`id_curso`),
+  KEY `id_curso` (`id_curso`),
+  CONSTRAINT `docente_curso_ibfk_1` FOREIGN KEY (`id_docente`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `docente_curso_ibfk_2` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Indices de la tabla `cursos`
---
-ALTER TABLE `cursos`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `idx_semestre_anio` (`nombre_curso`,`semestre`,`anio`);
+-- ========================================
+-- TABLA: criterios
+-- ========================================
+CREATE TABLE `criterios` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `descripcion` text NOT NULL,
+  `orden` int(11) NOT NULL DEFAULT 0,
+  `activo` tinyint(1) NOT NULL DEFAULT 1,
+  `id_curso` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `id_curso` (`id_curso`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Indices de la tabla `docente_curso`
---
-ALTER TABLE `docente_curso`
-  ADD PRIMARY KEY (`id_docente`,`id_curso`),
-  ADD KEY `id_curso` (`id_curso`);
+-- ========================================
+-- TABLA: equipos
+-- ========================================
+CREATE TABLE `equipos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombre_equipo` varchar(100) NOT NULL,
+  `estado_presentacion` varchar(20) NOT NULL DEFAULT 'pendiente',
+  `id_curso` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_curso_equipo` (`id_curso`,`nombre_equipo`),
+  KEY `id_curso` (`id_curso`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Indices de la tabla `equipos`
---
-ALTER TABLE `equipos`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `idx_curso_equipo` (`id_curso`,`nombre_equipo`),
-  ADD KEY `id_curso` (`id_curso`);
+-- ========================================
+-- TABLA: evaluaciones_maestro
+-- ========================================
+CREATE TABLE `evaluaciones_maestro` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_evaluador` int(11) NOT NULL,
+  `id_equipo_evaluado` int(11) NOT NULL,
+  `puntaje_total` int(11) NOT NULL,
+  `fecha_evaluacion` timestamp NULL DEFAULT current_timestamp(),
+  `id_curso` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_evaluador_equipo_curso` (`id_evaluador`,`id_equipo_evaluado`,`id_curso`),
+  KEY `id_equipo_evaluado` (`id_equipo_evaluado`),
+  KEY `id_curso` (`id_curso`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Indices de la tabla `escala_notas`
---
-ALTER TABLE `escala_notas`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `idx_curso_puntaje` (`id_curso`,`puntaje`),
-  ADD KEY `id_curso` (`id_curso`);
+-- ========================================
+-- TABLA: evaluaciones_detalle
+-- ========================================
+CREATE TABLE `evaluaciones_detalle` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_evaluacion` int(11) NOT NULL,
+  `id_criterio` int(11) NOT NULL,
+  `puntaje` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `id_evaluacion` (`id_evaluacion`),
+  KEY `id_criterio` (`id_criterio`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Indices de la tabla `evaluaciones_detalle`
---
-ALTER TABLE `evaluaciones_detalle`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `id_evaluacion` (`id_evaluacion`),
-  ADD KEY `id_criterio` (`id_criterio`);
+-- ========================================
+-- DATOS DE PRUEBA
+-- ========================================
 
---
--- Indices de la tabla `evaluaciones_maestro`
---
-ALTER TABLE `evaluaciones_maestro`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `idx_evaluador_equipo_curso` (`id_evaluador`,`id_equipo_evaluado`,`id_curso`),
-  ADD KEY `id_equipo_evaluado` (`id_equipo_evaluado`),
-  ADD KEY `id_curso` (`id_curso`);
+-- Insertar usuario docente
+INSERT INTO `usuarios` (`nombre`, `email`, `es_docente`, `password`, `id_equipo`, `id_curso`) 
+VALUES ('Docente Prueba', 'docente@uct.cl', 1, '$2y$10$5RFvZl7w.zP5YL7KDH.cTu0Jq6kU4kDH8Qj4qK3L9Q2M6N7O8P9Q', NULL, NULL);
 
---
--- Indices de la tabla `usuarios`
---
-ALTER TABLE `usuarios`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `email` (`email`),
-  ADD KEY `id_equipo` (`id_equipo`),
-  ADD KEY `idx_id_curso` (`id_curso`);
+-- Insertar cursos de prueba
+INSERT INTO `cursos` (`nombre_curso`, `semestre`, `anio`) 
+VALUES 
+('Programación I', '2025-1', 2025),
+('Algoritmos', '2025-1', 2025),
+('Base de Datos', '2025-2', 2025);
 
---
--- AUTO_INCREMENT de las tablas volcadas
---
+-- Asociar docente a cursos
+INSERT INTO `docente_curso` (`id_docente`, `id_curso`, `ponderacion`) 
+VALUES 
+(1, 1, 1.00),
+(1, 2, 1.00),
+(1, 3, 1.00);
 
---
--- AUTO_INCREMENT de la tabla `criterios`
---
-ALTER TABLE `criterios`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+-- Insertar equipos de prueba para el curso 1
+INSERT INTO `equipos` (`nombre_equipo`, `estado_presentacion`, `id_curso`) 
+VALUES 
+('Equipo A', 'pendiente', 1),
+('Equipo B', 'pendiente', 1),
+('Equipo C', 'pendiente', 1);
 
---
--- AUTO_INCREMENT de la tabla `cursos`
---
-ALTER TABLE `cursos`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+-- Insertar criterios de prueba para el curso 1
+INSERT INTO `criterios` (`descripcion`, `orden`, `activo`, `id_curso`) 
+VALUES 
+('Presentación', 1, 1, 1),
+('Contenido Técnico', 2, 1, 1),
+('Organización', 3, 1, 1),
+('Calidad del Código', 4, 1, 1),
+('Respuesta a Preguntas', 5, 1, 1);
 
---
--- AUTO_INCREMENT de la tabla `equipos`
---
-ALTER TABLE `equipos`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+-- Insertar estudiantes de prueba
+INSERT INTO `usuarios` (`nombre`, `email`, `es_docente`, `password`, `id_equipo`, `id_curso`) 
+VALUES 
+('Estudiante Prueba 1', 'estudiante@alu.uct.cl', 0, NULL, 1, 1),
+('Estudiante Prueba 2', 'estudiante2@alu.uct.cl', 0, NULL, 1, 1),
+('Estudiante Prueba 3', 'estudiante3@alu.uct.cl', 0, NULL, 2, 1),
+('Estudiante Prueba 4', 'estudiante4@alu.uct.cl', 0, NULL, 2, 1),
+('Estudiante Prueba 5', 'estudiante5@alu.uct.cl', 0, NULL, 3, 1);
 
---
--- AUTO_INCREMENT de la tabla `escala_notas`
---
-ALTER TABLE `escala_notas`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+-- Insertar evaluaciones de prueba
+INSERT INTO `evaluaciones_maestro` (`id_evaluador`, `id_equipo_evaluado`, `puntaje_total`, `id_curso`) 
+VALUES 
+(2, 2, 85, 1),
+(3, 3, 90, 1),
+(4, 1, 78, 1);
 
---
--- AUTO_INCREMENT de la tabla `evaluaciones_detalle`
---
-ALTER TABLE `evaluaciones_detalle`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+-- Insertar detalles de evaluaciones
+INSERT INTO `evaluaciones_detalle` (`id_evaluacion`, `id_criterio`, `puntaje`) 
+VALUES 
+(1, 1, 17),
+(1, 2, 18),
+(1, 3, 16),
+(1, 4, 17),
+(1, 5, 17),
+(2, 1, 18),
+(2, 2, 19),
+(2, 3, 18),
+(2, 4, 18),
+(2, 5, 17),
+(3, 1, 15),
+(3, 2, 16),
+(3, 3, 16),
+(3, 4, 15),
+(3, 5, 16);
 
---
--- AUTO_INCREMENT de la tabla `evaluaciones_maestro`
---
-ALTER TABLE `evaluaciones_maestro`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `usuarios`
---
-ALTER TABLE `usuarios`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- Restricciones para tablas volcadas
---
-
---
--- Filtros para la tabla `docente_curso`
---
-ALTER TABLE `docente_curso`
-  ADD CONSTRAINT `docente_curso_ibfk_1` FOREIGN KEY (`id_docente`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `docente_curso_ibfk_2` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

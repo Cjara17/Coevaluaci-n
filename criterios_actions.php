@@ -1,10 +1,17 @@
 <?php
 require 'db.php';
-verificar_sesion(true, true); // Solo docentes con curso activo
+verificar_sesion(true); // Solo docentes
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
     $action = $_POST['action'];
-    $id_curso_activo = get_active_course_id();
+    
+    $id_curso_activo = isset($_SESSION['id_curso_activo']) ? $_SESSION['id_curso_activo'] : null;
+    
+    if (!$id_curso_activo) {
+        header("Location: select_course.php");
+        exit();
+    }
+    
     $status_message = "Acción realizada con éxito.";
     $error_message = "";
     

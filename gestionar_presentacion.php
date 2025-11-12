@@ -1,13 +1,19 @@
 <?php
 require 'db.php';
 // Requerir ser docente Y tener un curso activo
-verificar_sesion(true, true); 
+verificar_sesion(true);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_equipo']) && isset($_POST['accion'])) {
     
     $id_equipo = (int)$_POST['id_equipo'];
     $accion = $_POST['accion'];
-    $id_curso_activo = get_active_course_id(); // Obtiene el ID del curso activo
+    
+    $id_curso_activo = isset($_SESSION['id_curso_activo']) ? $_SESSION['id_curso_activo'] : null;
+    
+    if (!$id_curso_activo) {
+        header("Location: select_course.php");
+        exit();
+    }
 
     $nuevo_estado = '';
     $mensaje = '';
