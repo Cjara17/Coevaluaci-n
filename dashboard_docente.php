@@ -31,148 +31,244 @@ $stmt_all_cursos->bind_param("i", $id_docente);
 $stmt_all_cursos->execute();
 $all_cursos = $stmt_all_cursos->get_result();
 
-// 3. CONSULTA PRINCIPAL: EQUIPOS DEL CURSO ACTIVO con su puntaje promedio
+// 3. OBTENER INFORMACIÓN DE LOS EQUIPOS DEL CURSO ACTIVO
+// Se incluyen subconsultas para calcular el promedio de estudiantes (0-100),
+// la nota del docente (0-100) y el total de evaluaciones por equipo.
 $sql_equipos = "
     SELECT 
         e.id, 
         e.nombre_equipo, 
         e.estado_presentacion,
-        (SELECT AVG(puntaje_total) FROM evaluaciones_maestro WHERE id_equipo_evaluado = e.id AND id_curso = ?) AS promedio_puntaje
-    FROM equipos e
+        (
+            SELECT AVG(em1.puntaje_total) 
+            FROM evaluaciones_maestro em1 
+            JOIN usuarios u1 ON em1.id_evaluador = u1.id 
+            WHERE em1.id_equipo_evaluado = e.id 
+            AND u1.es_docente = FALSE
+        ) as promedio_estudiantes,
+        (
+            SELECT em2.puntaje_total
+            FROM evaluaciones_maestro em2 
+            JOIN usuarios u2 ON em2.id_evaluador = u2.id 
+            WHERE em2.id_equipo_evaluado = e.id 
+            AND u2.es_docente = TRUE 
+            LIMIT 1
+        ) as nota_docente,
+        (
+            SELECT COUNT(em3.id) 
+            FROM evaluaciones_maestro em3 
+            JOIN usuarios u3 ON em3.id_evaluador = u3.id 
+            WHERE em3.id_equipo_evaluado = e.id 
+            AND u3.es_docente = FALSE
+        ) as total_eval_estudiantes
+    FROM equipos e 
     WHERE e.id_curso = ?
-    ORDER BY e.nombre_equipo ASC";
-
+    ORDER BY e.nombre_equipo ASC
+";
 $stmt_equipos = $conn->prepare($sql_equipos);
-$stmt_equipos->bind_param("ii", $id_curso_activo, $id_curso_activo);
+$stmt_equipos->bind_param("i", $id_curso_activo);
 $stmt_equipos->execute();
 $equipos = $stmt_equipos->get_result();
 
-// Función para calcular nota basada en el puntaje promedio (escala de 1-7)
+// 4. FUNCIÓN PARA CALCULAR LA NOTA FINAL PONDERADA Y LA NOTA EN ESCALA 1-7
+// Escala Chilena (asumiendo puntaje max. 100)
 function calcular_nota_final($puntaje) {
     if ($puntaje === null) return "N/A";
     
-    // Escala simple: puntaje de 0-100 a nota de 1.0-7.0
-    // 100 = 7.0, 0 = 1.0
+    // Fórmula: 1.0 + (Puntaje / 100) * 6.0
     $nota = 1.0 + ($puntaje / 100) * 6.0;
     
-    // Límites mínimo y máximo
     if ($nota < 1.0) $nota = 1.0;
     if ($nota > 7.0) $nota = 7.0;
     
-    return number_format($nota, 1);
+    return number_format($nota, 1, '.', ''); // Formato x.x
 }
 
+// Mensajes de estado y error
 $status_message = isset($_GET['status']) ? htmlspecialchars($_GET['status']) : '';
+$error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Docente</title>
+    <title>Dashboard Docente - Coevaluación</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
+        <div class="container-fluid">
             <a class="navbar-brand" href="dashboard_docente.php">
-                 <?php echo htmlspecialchars($curso_activo['nombre_curso']) . ' (' . htmlspecialchars($curso_activo['semestre']) . ')'; ?>
+                <img src="logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
+                Panel Docente
             </a>
-            <div class="ms-auto d-flex align-items-center">
-                
-                <form action="set_course.php" method="POST" class="d-flex me-3">
-                    <select name="id_curso" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="" disabled selected>Cambiar Curso...</option>
-                        <?php 
-                        $all_cursos->data_seek(0); 
-                        while($curso = $all_cursos->fetch_assoc()): 
-                            $selected = $curso['id'] == $id_curso_activo ? 'selected' : '';
-                        ?>
-                            <option value="<?php echo $curso['id']; ?>" <?php echo $selected; ?>>
-                                <?php echo htmlspecialchars($curso['nombre_curso'] . ' ' . $curso['semestre']); ?>
+            <div class="d-flex me-4">
+                <form action="set_course.php" method="POST" class="d-flex">
+                    <select name="id_curso" class="form-select form-select-sm me-2" onchange="this.form.submit()">
+                        <?php while($c = $all_cursos->fetch_assoc()): ?>
+                            <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $id_curso_activo) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($c['nombre_curso'] . ' ' . $c['semestre'] . '-' . $c['anio']); ?>
                             </option>
                         <?php endwhile; ?>
                     </select>
                 </form>
-
-                <ul class="navbar-nav">
-                    <li class="nav-item me-2"><a class="btn btn-outline-light" href="select_course.php">Listado Cursos</a></li>
-                    <li class="nav-item"><a class="btn btn-danger" href="logout.php">Cerrar Sesión</a></li>
-                </ul>
+                <a href="logout.php" class="btn btn-outline-danger btn-sm">Cerrar Sesión</a>
             </div>
         </div>
     </nav>
 
     <div class="container mt-5">
-        <h1>Dashboard Docente</h1>
-        <p class="lead">Gestión del curso: <strong><?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' ' . $curso_activo['semestre']); ?></strong></p>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                Curso Activo: <?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' ' . $curso_activo['semestre'] . '-' . $curso_activo['anio']); ?>
+            </h1>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#resetModal">
+                    Resetear Plataforma
+                </button>
+                <a href="gestionar_criterios.php" class="btn btn-info">
+                    Gestionar Criterios
+                </a>
+            </div>
+        </div>
 
         <?php if ($status_message): ?>
             <div class="alert alert-success"><?php echo $status_message; ?></div>
         <?php endif; ?>
+        <?php if ($error_message): ?>
+            <div class="alert alert-danger"><?php echo $error_message; ?></div>
+        <?php endif; ?>
 
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-header bg-secondary text-white">Herramientas del Curso</div>
-                    <div class="card-body">
-                        <div class="list-group">
-                            <a href="gestionar_criterios.php" class="list-group-item list-group-item-action">Gestionar Criterios de Evaluación</a>
-                            <a href="#" class="list-group-item list-group-item-action disabled">Gestionar Docentes Colaboradores (Pendiente)</a>
-                            <a href="export_results.php" class="list-group-item list-group-item-action">Exportar Resultados</a>
-                        </div>
+        <div class="modal fade" id="resetModal" tabindex="-1" aria-labelledby="resetModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="resetModalLabel">Confirmar Reseteo de Plataforma</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                </div>
-            </div>
-
-            <div class="col-md-8">
-                <div class="card mb-4">
-                    <div class="card-header bg-info text-white">Carga de Datos (Curso Activo)</div>
-                    <div class="card-body">
-                        <h5 class="card-title">Cargar Lista de Estudiantes y Equipos</h5>
-                        <form action="upload.php" method="POST" enctype="multipart/form-data" class="mb-3">
-                            <div class="input-group">
-                                <input type="file" class="form-control" name="lista_estudiantes" id="lista_estudiantes" accept=".csv" required>
-                                <button type="submit" class="btn btn-primary">Subir Estudiantes (CSV)</button>
-                            </div>
-                            <small class="form-text text-muted">Formato: Nombre, Correo, Nombre_Equipo</small>
+                    <div class="modal-body">
+                        <p class="text-danger fw-bold">ADVERTENCIA: Esta acción es irreversible.</p>
+                        <p>Al confirmar, se eliminarán todos los datos (equipos, estudiantes, evaluaciones, criterios) asociados al **curso activo**.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <form action="admin_actions.php" method="POST" class="d-inline">
+                            <input type="hidden" name="action" value="reset_all"> 
+                            <button type="submit" class="btn btn-danger">Confirmar Reseteo Total</button>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
 
-        <h2 class="mt-4">Equipos del Curso</h2>
-        <table class="table table-striped table-hover">
-            <thead>
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Gestión de Estudiantes y Equipos</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Sube un archivo **CSV** con la lista de estudiantes y su equipo.</p>
+                        <form action="upload.php" method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="lista_estudiantes" class="form-label">Archivo CSV (Nombre, Email, Equipo)</label>
+                                <input class="form-control" type="file" id="lista_estudiantes" name="lista_estudiantes" accept=".csv" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Subir y Procesar Lista</button>
+                        </form>
+                        <hr>
+                        <p class="text-muted small">
+                            Formato CSV requerido:
+                            <br>
+                            `Nombre Apellido,correo@alu.uct.cl,Nombre Equipo`
+                            <br>
+                            Ejemplo: `Juan Perez,jperez@alu.uct.cl,Los Vengadores`
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                 <div class="card shadow h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Resultados y Exportar</h5>
+                    </div>
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <p>Exporta los resultados finales (promedio coevaluación de estudiantes y nota del docente) a un archivo CSV para el cálculo de notas.</p>
+                            <p class="text-muted small">
+                                *El cálculo usa una ponderación **50% estudiantes** y **50% docente**.
+                            </p>
+                        </div>
+                        <a href="export_results.php" class="btn btn-success btn-lg mt-3">Exportar Resultados Finales</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>Equipos del Curso</h2>
+        <table class="table table-striped table-hover shadow-sm">
+            <thead class="table-dark">
                 <tr>
                     <th>Equipo</th>
-                    <th class="text-center">Estado Presentación</th>
-                    <th class="text-center">Puntaje Promedio</th>
-                    <th class="text-center">Nota Final</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-center">Eval. Estudiantes</th>
+                    <th class="text-center">Nota Docente (0-100)</th>
+                    <th class="text-center">Puntaje Final (0-100)</th>
+                    <th class="text-center">Nota Final (1.0-7.0)</th>
                     <th class="text-center">Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if ($equipos->num_rows > 0): ?>
-                    <?php while($equipo = $equipos->fetch_assoc()): 
-                        $promedio = $equipo['promedio_puntaje'] !== null ? number_format($equipo['promedio_puntaje'], 2) : 'N/A';
-                        $nota = calcular_nota_final($equipo['promedio_puntaje']);
-                    ?>
+                    <?php while($equipo = $equipos->fetch_assoc()): ?>
+                        <?php
+                            // Calcular puntaje final y nota
+                            $promedio_est = $equipo['promedio_estudiantes']; // Valor de 0 a 100
+                            $nota_doc = $equipo['nota_docente']; // Valor de 0 a 100
+                            $puntaje_final_score = null;
+                            $nota_final_grado = 'N/A';
+
+                            $promedio_est_display = ($promedio_est !== null) ? round($promedio_est, 2) : 'N/A';
+                            $nota_doc_display = ($nota_doc !== null) ? round($nota_doc, 2) : 'N/A';
+
+                            // Solo calcular el puntaje final si la presentación ha terminado
+                            if ($equipo['estado_presentacion'] == 'finalizado') {
+                                // Si no hay promedio de estudiantes, asumimos 0 (para no perder la nota docente)
+                                $promedio_est_final = ($promedio_est !== null) ? $promedio_est : 0; 
+                                
+                                if ($nota_doc !== null) {
+                                    // Ponderación 50% estudiantes, 50% docente
+                                    $puntaje_final_score = ($promedio_est_final * 0.5) + ($nota_doc * 0.5);
+                                    $nota_final_grado = calcular_nota_final($puntaje_final_score);
+                                    $puntaje_final_score = number_format($puntaje_final_score, 2, '.', ''); // Formatear para mostrar
+                                } else {
+                                    $puntaje_final_score = 'N/A (Falta Docente)';
+                                }
+                            } else {
+                                $puntaje_final_score = 'Pendiente';
+                            }
+                        ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($equipo['nombre_equipo']); ?></td>
+                        <td><strong><?php echo htmlspecialchars($equipo['nombre_equipo']); ?></strong></td>
                         <td class="text-center">
                             <?php 
-                            $badge_class = 'bg-secondary';
-                            if ($equipo['estado_presentacion'] == 'presentando') { $badge_class = 'bg-primary'; }
-                            if ($equipo['estado_presentacion'] == 'finalizado') { $badge_class = 'bg-success'; }
+                                if ($equipo['estado_presentacion'] == 'presentando') {
+                                    echo '<span class="badge bg-success">Presentando</span>';
+                                } elseif ($equipo['estado_presentacion'] == 'finalizado') {
+                                    echo '<span class="badge bg-secondary">Finalizado</span>';
+                                } else {
+                                    echo '<span class="badge bg-warning text-dark">Pendiente</span>';
+                                }
                             ?>
-                            <span class="badge <?php echo $badge_class; ?>">
-                                <?php echo ucfirst(htmlspecialchars($equipo['estado_presentacion'])); ?>
-                            </span>
                         </td>
-                        <td class="text-center"><?php echo $promedio; ?></td>
-                        <td class="text-center fw-bold"><?php echo $nota; ?></td>
+                        <td class="text-center" title="Puntaje promedio estudiantes (0-100): <?php echo $promedio_est_display; ?>">
+                            <?php echo $equipo['total_eval_estudiantes']; ?> (<?php echo $promedio_est_display; ?>)
+                        </td>
+                        <td class="text-center"><?php echo $nota_doc_display; ?></td>
+                        <td class="text-center fw-bold text-primary"><?php echo $puntaje_final_score; ?></td>
+                        <td class="text-center fw-bold text-danger"><?php echo $nota_final_grado; ?></td>
                         <td class="text-center">
                             <form action="gestionar_presentacion.php" method="POST" class="d-inline">
                                 <input type="hidden" name="id_equipo" value="<?php echo $equipo['id']; ?>">
@@ -191,12 +287,13 @@ $status_message = isset($_GET['status']) ? htmlspecialchars($_GET['status']) : '
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="5" class="text-center">No hay equipos registrados para este curso. Sube la lista de estudiantes.</td>
+                        <td colspan="7" class="text-center">No hay equipos registrados para este curso. Sube la lista de estudiantes.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
         </table>
         
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -46,6 +46,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     exit();
 }
+    $_SESSION['id_usuario'] = $usuario['id'];
+    $_SESSION['nombre'] = $usuario['nombre'];
+    $_SESSION['id_equipo'] = $usuario['id_equipo'];
+    $_SESSION['es_docente'] = $usuario['es_docente'];
+    $_SESSION['id_curso'] = $usuario['id_curso'];
+
+    // AÑADIR ESTA LÍNEA PARA EL ESTUDIANTE Y PARA EL DOCENTE:
+    if (isset($usuario['id_curso'])) {
+        $_SESSION['id_curso_activo'] = $usuario['id_curso'];
+    } 
 
 // Capturar errores enviados por GET
 $mensaje_error = isset($_GET['error']) ? $_GET['error'] : '';
