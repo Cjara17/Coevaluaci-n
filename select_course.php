@@ -52,6 +52,18 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : (iss
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="dashboard_docente.php">
+                <img src="logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
+                Panel Docente
+            </a>
+            <div class="d-flex me-4">
+                <a href="logout.php" class="btn btn-outline-danger btn-sm">Cerrar Sesión</a>
+            </div>
+        </div>
+    </nav>
+
     <div class="container mt-5">
         <h1 class="mb-4">Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre']); ?></h1>
         <p class="text-muted">Selecciona el curso que deseas gestionar o crea uno nuevo.</p>
@@ -120,9 +132,6 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : (iss
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="text-center mt-5">
-             <a href="logout.php" class="btn btn-outline-danger">Cerrar Sesión</a>
         </div>
     </div>
 </body>

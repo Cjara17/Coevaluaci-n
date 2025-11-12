@@ -75,6 +75,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt_delete_detalle = $conn->prepare("DELETE FROM evaluaciones_detalle WHERE id_evaluacion = ?");
             $stmt_delete_detalle->bind_param("i", $id_evaluacion);
             $stmt_delete_detalle->execute();
+
+            // Registrar log de eliminación de detalles de evaluación
+            $user_id = $_SESSION['id_usuario'];
+            $now = date('Y-m-d H:i:s');
+            $detalle = "Eliminó DETALLE DE EVALUACIÓN ID $id_evaluacion";
+
+            $log = $conn->prepare("INSERT INTO logs (id_usuario, accion, detalle, fecha) VALUES (?, 'ELIMINAR', ?, ?)");
+            $log->bind_param("iss", $user_id, $detalle, $now);
+            $log->execute();
+            $log->close();
+
             $stmt_delete_detalle->close();
         }
 

@@ -16,12 +16,24 @@ $stmt_criterios->bind_param("i", $id_curso_activo);
 $stmt_criterios->execute();
 $criterios = $stmt_criterios->get_result();
 
-// Opcional: Obtener el nombre del curso para el título
-$stmt_curso = $conn->prepare("SELECT nombre_curso, semestre FROM cursos WHERE id = ?");
+// 1. OBTENER INFORMACIÓN DEL CURSO ACTIVO (para mostrar el título)
+$stmt_curso = $conn->prepare("SELECT nombre_curso, semestre, anio FROM cursos WHERE id = ?");
 $stmt_curso->bind_param("i", $id_curso_activo);
 $stmt_curso->execute();
 $curso_activo = $stmt_curso->get_result()->fetch_assoc();
 $stmt_curso->close();
+
+// 2. OBTENER TODOS LOS CURSOS DEL DOCENTE (para el selector en el navbar)
+$sql_all_cursos = "
+    SELECT c.id, c.nombre_curso, c.semestre, c.anio
+    FROM cursos c
+    JOIN docente_curso dc ON c.id = dc.id_curso
+    WHERE dc.id_docente = ?
+    ORDER BY c.anio DESC, c.semestre DESC";
+$stmt_all_cursos = $conn->prepare($sql_all_cursos);
+$stmt_all_cursos->bind_param("i", $id_docente);
+$stmt_all_cursos->execute();
+$all_cursos = $stmt_all_cursos->get_result();
 
 $status_message = isset($_GET['status']) ? htmlspecialchars($_GET['status']) : '';
 $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
@@ -36,11 +48,21 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
+        <div class="container-fluid">
             <a class="navbar-brand" href="dashboard_docente.php">
-                <?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' (' . $curso_activo['semestre'] . ')'); ?>
+                <img src="logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
+                Panel Docente
             </a>
-            <a class="btn btn-outline-light" href="dashboard_docente.php">Volver al Dashboard</a>
+            <div class="d-flex me-4">
+                <form action="set_course.php" method="POST" class="d-flex">
+                    <select name="id_curso" class="form-select form-select-sm me-2" disabled>
+                        <option>
+                            <?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' ' . $curso_activo['semestre'] . '-' . $curso_activo['anio']); ?>
+                        </option>
+                    </select>
+                </form>
+                <a href="logout.php" class="btn btn-outline-danger btn-sm">Cerrar Sesión</a>
+            </div>
         </div>
     </nav>
 
@@ -101,11 +123,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                                             <?php echo $criterio['activo'] ? 'Desactivar' : 'Activar'; ?>
                                         </button>
                                     </form>
-                                    <form action="criterios_actions.php" method="POST" class="d-inline">
-                                        <input type="hidden" name="id_criterio" value="<?php echo $criterio['id']; ?>">
-                                        <input type="hidden" name="action" value="delete">
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar este criterio? Esto no se puede deshacer.');">Eliminar</button>
-                                    </form>
+                                    <button class="btn btn-sm btn-danger" onclick="openDeleteModal(<?php echo $criterio['id']; ?>, 'criterios_actions.php')">Eliminar</button>
                                 </td>
                             </tr>
                             <?php endwhile; ?>
@@ -117,5 +135,45 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
             </div>
         </div>
     </div>
+
+    <!-- Modal de Confirmación de Eliminación -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar eliminación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-danger fw-bold">ADVERTENCIA: Esta acción es irreversible.</p>
+                    <p>¿Estás seguro de que quieres eliminar este elemento? No se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="form-delete" class="btn btn-danger fw-bold">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario oculto para eliminación -->
+    <form id="form-delete" method="POST" style="display: none;">
+        <input type="hidden" name="action" id="delete-action">
+        <input type="hidden" name="id" id="delete-id">
+        <input type="hidden" name="confirm" value="yes">
+    </form>
+
+    <script>
+        function openDeleteModal(id, action) {
+            document.getElementById('delete-id').value = id;
+            document.getElementById('form-delete').action = action;
+            document.getElementById('delete-action').value = 'delete';
+            document.getElementById('delete-id').name = 'id_criterio'; // Para criterios
+            var modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+            modal.show();
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

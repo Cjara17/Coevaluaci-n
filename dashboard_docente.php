@@ -96,7 +96,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body style="padding-bottom: 120px;">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="dashboard_docente.php">
@@ -154,7 +154,8 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <form action="admin_actions.php" method="POST" class="d-inline">
-                            <input type="hidden" name="action" value="reset_all"> 
+                            <input type="hidden" name="action" value="reset_all">
+                            <input type="hidden" name="confirm" value="yes">
                             <button type="submit" class="btn btn-danger">Confirmar Reseteo Total</button>
                         </form>
                     </div>
@@ -292,8 +293,56 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                 <?php endif; ?>
             </tbody>
         </table>
-        
+
+        <div style="height: 120px;"></div>
+
     </div>
+
+    <!-- Modal de Confirmación de Eliminación -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar eliminación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-danger fw-bold">ADVERTENCIA: Esta acción es irreversible.</p>
+                    <p>¿Estás seguro de que quieres eliminar este elemento? No se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="form-delete" class="btn btn-danger fw-bold">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario oculto para eliminación -->
+    <form id="form-delete" method="POST" style="display: none;">
+        <input type="hidden" name="action" id="delete-action">
+        <input type="hidden" name="id" id="delete-id">
+        <input type="hidden" name="confirm" value="yes">
+    </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var confirmDeleteModal = document.getElementById('confirmDeleteModal');
+            confirmDeleteModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var action = button.getAttribute('data-action');
+                var id = button.getAttribute('data-id');
+                var type = button.getAttribute('data-type');
+
+                var form = document.getElementById('form-delete');
+                form.action = action;
+                document.getElementById('delete-action').value = 'delete';
+                document.getElementById('delete-id').value = id;
+                document.getElementById('delete-id').name = (type === 'criterio') ? 'id_criterio' : 'id';
+            });
+        });
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
