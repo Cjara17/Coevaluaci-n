@@ -1,7 +1,7 @@
 <?php
 require 'db.php';
 // Requerir sesión activa, no importa si es docente o estudiante, ambos pueden evaluar.
-// Asumimos que los estudiantes siempre tienen id_curso en sesión (seteado en login.php).
+// Si no hay id_curso_activo en sesión, lo inferiremos desde el equipo evaluado.
 if (!isset($_SESSION['id_usuario'])) {
     header("Location: index.php");
     exit();
@@ -12,30 +12,55 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $id_evaluador = $_SESSION['id_usuario'];
     $id_equipo_evaluado = (int)$_POST['id_equipo_evaluado'];
     
-    // Obtener el ID del curso activo. Si es docente, de la sesión. Si es estudiante, de la sesión.
-    // Esto funciona porque en login.php ya aseguramos que los estudiantes tengan este valor.
-    if (!isset($_SESSION['id_curso_activo'])) {
-         header("Location: /error.php?msg=" . urlencode("No se encontró el curso activo en la sesión."));
-         exit();
+    // Obtener o inferir el ID del curso activo
+    if (isset($_SESSION['id_curso_activo'])) {
+        $id_curso_activo = (int)$_SESSION['id_curso_activo'];
+    } else {
+        // Inferir curso desde el equipo evaluado
+        $stmt_curso_from_equipo = $conn->prepare("SELECT id_curso FROM equipos WHERE id = ?");
+        $stmt_curso_from_equipo->bind_param("i", $id_equipo_evaluado);
+        $stmt_curso_from_equipo->execute();
+        $res_curso = $stmt_curso_from_equipo->get_result();
+        if ($res_curso->num_rows === 1) {
+            $id_curso_activo = (int)$res_curso->fetch_assoc()['id_curso'];
+            // Guardar en sesión para el resto del flujo
+            $_SESSION['id_curso_activo'] = $id_curso_activo;
+        } else {
+            // No se pudo inferir, redirigir con error a vistas existentes
+            if (isset($_SESSION['es_docente']) && $_SESSION['es_docente']) {
+                header("Location: dashboard_docente.php?error=" . urlencode("No se pudo determinar el curso activo."));
+            } else {
+                header("Location: dashboard_estudiante.php?error=" . urlencode("No se pudo determinar el curso activo."));
+            }
+            exit();
+        }
+        $stmt_curso_from_equipo->close();
     }
-    $id_curso_activo = (int)$_SESSION['id_curso_activo'];
     
     $puntajes = [];
     $puntaje_total = 0;
     
     // Recopilar puntajes y calcular el total
-    foreach ($_POST as $key => $value) {
-        if (strpos($key, 'criterio_') === 0) {
-            $id_criterio = (int)str_replace('criterio_', '', $key);
+    // Aceptar dos formatos:
+    // a) evaluar.php actual: criterios[ID] = valor
+    // b) legado: inputs 'criterio_ID' = valor
+    if (isset($_POST['criterios']) && is_array($_POST['criterios'])) {
+        foreach ($_POST['criterios'] as $id_criterio => $value) {
+            $id_criterio = (int)$id_criterio;
             $puntaje = (int)$value;
-            
-            // Validar que el puntaje esté en un rango razonable (ej. 1 a 5, o 0 a 100)
-            if ($puntaje < 0) {
-                $puntaje = 0; // O manejar error
-            }
-
+            if ($puntaje < 0) $puntaje = 0;
             $puntajes[$id_criterio] = $puntaje;
             $puntaje_total += $puntaje;
+        }
+    } else {
+        foreach ($_POST as $key => $value) {
+            if (strpos($key, 'criterio_') === 0) {
+                $id_criterio = (int)str_replace('criterio_', '', $key);
+                $puntaje = (int)$value;
+                if ($puntaje < 0) $puntaje = 0;
+                $puntajes[$id_criterio] = $puntaje;
+                $puntaje_total += $puntaje;
+            }
         }
     }
     
@@ -107,7 +132,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($_SESSION['es_docente']) {
             header("Location: dashboard_docente.php?status=" . urlencode("Evaluación registrada/actualizada con éxito."));
         } else {
-             // Redirigir al estudiante a una página de éxito
+            // Redirigir al estudiante a una página de éxito
             header("Location: evaluacion_exitosa.php?msg=" . urlencode("Tu coevaluación se ha guardado con éxito."));
         }
         exit();
@@ -120,8 +145,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($_SESSION['es_docente']) {
             header("Location: dashboard_docente.php?error=" . urlencode($error_msg));
         } else {
-            // Enviar al estudiante a la página de error
-            header("Location: /error.php?msg=" . urlencode($error_msg));
+            // Redirigir a dashboard estudiante con mensaje de error
+            header("Location: dashboard_estudiante.php?error=" . urlencode($error_msg));
         }
         exit();
     }

@@ -20,8 +20,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
     $usuario = $resultado->fetch_assoc();
     
-    // Lógica de verificación de contraseña para docentes
-    if ($usuario['es_docente']) {
+    // Lógica de verificación de contraseña:
+    // Si el usuario tiene contraseña almacenada (docente o invitado), se valida.
+    $requierePassword = !empty($usuario['password']);
+    if ($requierePassword) {
         if (empty($password) || !password_verify($password, $usuario['password'])) {
             header("Location: index.php?error=Correo o contraseña incorrectos");
             exit();
@@ -37,7 +39,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
     // Redirigir según el rol del usuario
     if ($usuario['es_docente']) {
-        // Los docentes van a seleccionar su curso
+        // Si el docente tuviera un curso asociado por defecto se podría setear aquí:
+        if (!empty($usuario['id_curso'])) {
+            $_SESSION['id_curso_activo'] = $usuario['id_curso'];
+        }
         header("Location: select_course.php");
     } else {
         // Los estudiantes van a su dashboard
@@ -46,16 +51,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     exit();
 }
-    $_SESSION['id_usuario'] = $usuario['id'];
-    $_SESSION['nombre'] = $usuario['nombre'];
-    $_SESSION['id_equipo'] = $usuario['id_equipo'];
-    $_SESSION['es_docente'] = $usuario['es_docente'];
-    $_SESSION['id_curso'] = $usuario['id_curso'];
-
-    // AÑADIR ESTA LÍNEA PARA EL ESTUDIANTE Y PARA EL DOCENTE:
-    if (isset($usuario['id_curso'])) {
-        $_SESSION['id_curso_activo'] = $usuario['id_curso'];
-    } 
 
 // Capturar errores enviados por GET
 $mensaje_error = isset($_GET['error']) ? $_GET['error'] : '';

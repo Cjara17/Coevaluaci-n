@@ -87,6 +87,8 @@ function calcular_nota_final($puntaje) {
 // Mensajes de estado y error
 $status_message = isset($_GET['status']) ? htmlspecialchars($_GET['status']) : '';
 $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
+$invite_success = isset($_GET['invite_success']) ? true : false;
+$invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_error']) : '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -124,6 +126,9 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                 Curso Activo: <?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' ' . $curso_activo['semestre'] . '-' . $curso_activo['anio']); ?>
             </h1>
             <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#inviteModal">
+                    Agregar invitado
+                </button>
                 <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#resetModal">
                     Resetear Plataforma
                 </button>
@@ -138,6 +143,9 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
         <?php endif; ?>
         <?php if ($error_message): ?>
             <div class="alert alert-danger"><?php echo $error_message; ?></div>
+        <?php endif; ?>
+        <?php if ($invite_error): ?>
+            <div class="alert alert-danger"><?php echo $invite_error; ?></div>
         <?php endif; ?>
 
         <div class="modal fade" id="resetModal" tabindex="-1" aria-labelledby="resetModalLabel" aria-hidden="true">
@@ -298,6 +306,64 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
 
     </div>
 
+    <!-- Modal: Crear nuevo evaluador -->
+    <div class="modal fade" id="inviteModal" tabindex="-1" aria-labelledby="inviteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="inviteModalLabel">Crear nuevo evaluador</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="create_evaluator.php" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="tipo_evaluador" class="form-label">Rol del evaluador</label>
+                            <select class="form-select" id="tipo_evaluador" name="tipo_evaluador" required>
+                                <option value="invitado">Invitado</option>
+                                <option value="estudiante">Estudiante</option>
+                                <option value="docente">Docente</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email_evaluador" class="form-label">Correo electrónico</label>
+                            <input type="email" class="form-control" id="email_evaluador" name="email" required placeholder="correo@dominio.cl">
+                        </div>
+                        <div class="mb-3">
+                            <label for="password_evaluador" class="form-label">Contraseña</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="password_evaluador" name="password" required minlength="6" placeholder="Ingrese o genere una contraseña">
+                                <button class="btn btn-outline-secondary" type="button" id="btn-generar-password">Generar automáticamente</button>
+                            </div>
+                            <div class="form-text">La contraseña debe tener al menos 6 caracteres.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Crear</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Éxito en creación -->
+    <div class="modal fade" id="inviteSuccessModal" tabindex="-1" aria-labelledby="inviteSuccessModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="inviteSuccessModalLabel">Operación exitosa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="lead mb-0">Perfil creado y credenciales enviadas de manera correcta.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Confirmación de Eliminación -->
     <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -344,5 +410,28 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const generarBtn = document.getElementById('btn-generar-password');
+            if (generarBtn) {
+                generarBtn.addEventListener('click', function () {
+                    const targetInput = document.getElementById('password_evaluador');
+                    if (!targetInput) return;
+
+                    const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+                    let password = '';
+                    for (let i = 0; i < 12; i++) {
+                        password += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+                    }
+                    targetInput.value = password;
+                });
+            }
+
+            <?php if ($invite_success): ?>
+            const successModal = new bootstrap.Modal(document.getElementById('inviteSuccessModal'));
+            successModal.show();
+            <?php endif; ?>
+        });
+    </script>
 </body>
 </html>
