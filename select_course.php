@@ -85,15 +85,16 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : (iss
                         <?php if ($cursos->num_rows > 0): ?>
                             <div class="list-group">
                                 <?php while($curso = $cursos->fetch_assoc()): ?>
-                                    <form action="select_course.php" method="POST" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                                         <div>
                                             <h6 class="mb-1"><?php echo htmlspecialchars($curso['nombre_curso']); ?></h6>
                                             <small class="text-muted"><?php echo htmlspecialchars($curso['semestre']) . ' - ' . htmlspecialchars($curso['anio']); ?></small>
                                         </div>
-                                        <input type="hidden" name="id_curso" value="<?php echo $curso['id']; ?>">
-                                        <input type="hidden" name="action" value="select">
-                                        <button type="submit" class="btn btn-sm btn-success">Gestionar</button>
-                                    </form>
+                                        <div class="d-flex gap-2 justify-content-end align-items-center">
+                                            <a href="dashboard_docente.php?id=<?php echo $curso['id']; ?>" class="btn btn-success btn-sm">Gestionar</a>
+                                            <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" data-id="<?php echo $curso['id']; ?>" data-name="<?php echo htmlspecialchars($curso['nombre_curso']); ?>">Eliminar</button>
+                                        </div>
+                                    </div>
                                 <?php endwhile; ?>
                             </div>
                         <?php else: ?>
@@ -134,5 +135,45 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : (iss
             </div>
         </div>
     </div>
+
+    <!-- Modal de Confirmación de Eliminación -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar eliminación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-danger fw-bold">ADVERTENCIA: Esta acción es irreversible.</p>
+                    <p>¿Estás seguro de eliminar este curso? Se eliminarán asociaciones en docente_curso pero NO debe borrar estudiantes, equipos ni evaluaciones de otros cursos.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="form-delete" class="btn btn-danger fw-bold">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario oculto para eliminación -->
+    <form id="form-delete" action="delete_course.php" method="POST" style="display: none;">
+        <input type="hidden" name="action" value="delete_course">
+        <input type="hidden" name="id_curso" id="delete-id">
+        <input type="hidden" name="confirm" value="yes">
+    </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var confirmDeleteModal = document.getElementById('confirmDeleteModal');
+            confirmDeleteModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var id = button.getAttribute('data-id');
+                document.getElementById('delete-id').value = id;
+            });
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
