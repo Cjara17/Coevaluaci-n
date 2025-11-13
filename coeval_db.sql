@@ -16,13 +16,10 @@ START TRANSACTION;
 SET time_zone = "+00:00";
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+@OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+@OLD_COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION;
 /*!40101 SET NAMES utf8mb4 */;
-
---
--- Base de datos: `coeval_db`
---
 
 -- ========================================
 -- TABLA: usuarios
@@ -122,6 +119,23 @@ CREATE TABLE `evaluaciones_detalle` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================
+-- TABLA: logs (NUEVA)
+-- ========================================
+CREATE TABLE `logs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_usuario` int(11) NOT NULL,
+  `accion` varchar(50) NOT NULL,
+  `detalle` text DEFAULT NULL,
+  `fecha` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `id_usuario` (`id_usuario`),
+  CONSTRAINT `logs_ibfk_1` FOREIGN KEY (`id_usuario`) 
+      REFERENCES `usuarios` (`id`) 
+      ON DELETE CASCADE 
+      ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
 -- DATOS DE PRUEBA
 -- ========================================
 
@@ -143,14 +157,14 @@ VALUES
 (1, 2, 1.00),
 (1, 3, 1.00);
 
--- Insertar equipos de prueba para el curso 1
+-- Insertar equipos de prueba
 INSERT INTO `equipos` (`nombre_equipo`, `estado_presentacion`, `id_curso`) 
 VALUES 
 ('Equipo A', 'pendiente', 1),
 ('Equipo B', 'pendiente', 1),
 ('Equipo C', 'pendiente', 1);
 
--- Insertar criterios de prueba para el curso 1
+-- Insertar criterios de prueba
 INSERT INTO `criterios` (`descripcion`, `orden`, `activo`, `id_curso`) 
 VALUES 
 ('Presentación', 1, 1, 1),
@@ -159,7 +173,7 @@ VALUES
 ('Calidad del Código', 4, 1, 1),
 ('Respuesta a Preguntas', 5, 1, 1);
 
--- Insertar estudiantes de prueba
+-- Insertar estudiantes
 INSERT INTO `usuarios` (`nombre`, `email`, `es_docente`, `password`, `id_equipo`, `id_curso`) 
 VALUES 
 ('Estudiante Prueba 1', 'estudiante@alu.uct.cl', 0, NULL, 1, 1),
@@ -168,34 +182,24 @@ VALUES
 ('Estudiante Prueba 4', 'estudiante4@alu.uct.cl', 0, NULL, 2, 1),
 ('Estudiante Prueba 5', 'estudiante5@alu.uct.cl', 0, NULL, 3, 1);
 
--- Insertar evaluaciones de prueba
+-- Insertar evaluaciones maestro
 INSERT INTO `evaluaciones_maestro` (`id_evaluador`, `id_equipo_evaluado`, `puntaje_total`, `id_curso`) 
 VALUES 
 (2, 2, 85, 1),
 (3, 3, 90, 1),
 (4, 1, 78, 1);
 
--- Insertar detalles de evaluaciones
+-- Insertar detalles
 INSERT INTO `evaluaciones_detalle` (`id_evaluacion`, `id_criterio`, `puntaje`) 
 VALUES 
-(1, 1, 17),
-(1, 2, 18),
-(1, 3, 16),
-(1, 4, 17),
-(1, 5, 17),
-(2, 1, 18),
-(2, 2, 19),
-(2, 3, 18),
-(2, 4, 18),
-(2, 5, 17),
-(3, 1, 15),
-(3, 2, 16),
-(3, 3, 16),
-(3, 4, 15),
-(3, 5, 16);
+(1, 1, 17),(1, 2, 18),(1, 3, 16),(1, 4, 17),(1, 5, 17),
+(2, 1, 18),(2, 2, 19),(2, 3, 18),(2, 4, 18),(2, 5, 17),
+(3, 1, 15),(3, 2, 16),(3, 3, 16),(3, 4, 15),(3, 5, 16);
 
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+@OLD_CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+@OLD_CHARACTER_SET_RESULTS=@@ - risultati
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
