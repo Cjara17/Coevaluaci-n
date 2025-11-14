@@ -28,7 +28,7 @@ $_SESSION['last_activity'] = time();
 // Configuración de la Base de Datos
 $servername = "localhost";
 $username = "root";
-$password = ""; 
+$password = "root"; 
 $dbname = "coeval_db";
 
 // Crear conexión
