@@ -91,7 +91,11 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : (iss
                                             <small class="text-muted"><?php echo htmlspecialchars($curso['semestre']) . ' - ' . htmlspecialchars($curso['anio']); ?></small>
                                         </div>
                                         <div class="d-flex gap-2 justify-content-end align-items-center">
-                                            <a href="dashboard_docente.php?id=<?php echo $curso['id']; ?>" class="btn btn-success btn-sm">Gestionar</a>
+                                            <form action="select_course.php" method="POST" class="d-inline">
+                                                <input type="hidden" name="action" value="select">
+                                                <input type="hidden" name="id_curso" value="<?php echo $curso['id']; ?>">
+                                                <button type="submit" class="btn btn-success btn-sm">Gestionar</button>
+                                            </form>
                                             <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" data-id="<?php echo $curso['id']; ?>" data-name="<?php echo htmlspecialchars($curso['nombre_curso']); ?>">Eliminar</button>
                                         </div>
                                     </div>
