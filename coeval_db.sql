@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-@OLD_COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION;
+@OLD_COLLATION_CONNECTION=@@OLD_COLLATION_CONNECTION;
 /*!40101 SET NAMES utf8mb4 */;
 
 -- ========================================
@@ -61,6 +61,21 @@ CREATE TABLE `docente_curso` (
   KEY `id_curso` (`id_curso`),
   CONSTRAINT `docente_curso_ibfk_1` FOREIGN KEY (`id_docente`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
   CONSTRAINT `docente_curso_ibfk_2` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
+-- TABLA: docente_curso_log (AUDITORÍA)
+-- ========================================
+CREATE TABLE `docente_curso_log` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `id_docente` INT(11) NOT NULL,
+  `id_curso` INT(11) NOT NULL,
+  `ponderacion_anterior` DECIMAL(3,2) DEFAULT NULL,
+  `ponderacion_nueva` DECIMAL(3,2) NOT NULL,
+  `id_usuario_accion` INT(11) NOT NULL,
+  `fecha_cambio` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_docente_curso` (`id_docente`,`id_curso`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================
@@ -119,7 +134,7 @@ CREATE TABLE `evaluaciones_detalle` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================
--- TABLA: logs (NUEVA)
+-- TABLA: logs
 -- ========================================
 CREATE TABLE `logs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -198,8 +213,7 @@ VALUES
 
 COMMIT;
 
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET */;
 @OLD_CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-@OLD_CHARACTER_SET_RESULTS=@@ - risultati
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+@OLD_CHARACTER_SET_CONNECTION=@OLD_COLLATION_CONNECTION */;

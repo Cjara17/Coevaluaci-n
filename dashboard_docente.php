@@ -31,37 +31,60 @@ $stmt_all_cursos->bind_param("i", $id_docente);
 $stmt_all_cursos->execute();
 $all_cursos = $stmt_all_cursos->get_result();
 
+// Función para calcular la evaluación docente ponderada
+function obtener_puntaje_docente_ponderado($conn, $id_equipo, $id_curso) {
+    $sql = "
+        SELECT em.puntaje_total, dc.ponderacion
+        FROM evaluaciones_maestro em
+        JOIN usuarios u ON em.id_evaluador = u.id
+        JOIN docente_curso dc ON u.id = dc.id_docente AND dc.id_curso = em.id_curso
+        WHERE em.id_equipo_evaluado = ? AND em.id_curso = ? AND u.es_docente = TRUE
+    ";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $id_equipo, $id_curso);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $total_ponderado = 0;
+    $total_ponderacion = 0;
+
+    while ($row = $result->fetch_assoc()) {
+        $total_ponderado += $row['puntaje_total'] * $row['ponderacion'];
+        $total_ponderacion += $row['ponderacion'];
+    }
+
+    $stmt->close();
+
+    if ($total_ponderacion > 0) {
+        return $total_ponderado / $total_ponderacion;
+    } else {
+        return null; // No hay evaluaciones docentes
+    }
+}
+
 // 3. OBTENER INFORMACIÓN DE LOS EQUIPOS DEL CURSO ACTIVO
 // Se incluyen subconsultas para calcular el promedio de estudiantes (0-100),
-// la nota del docente (0-100) y el total de evaluaciones por equipo.
+// la nota del docente ponderada (0-100) y el total de evaluaciones por equipo.
 $sql_equipos = "
-    SELECT 
-        e.id, 
-        e.nombre_equipo, 
+    SELECT
+        e.id,
+        e.nombre_equipo,
         e.estado_presentacion,
         (
-            SELECT AVG(em1.puntaje_total) 
-            FROM evaluaciones_maestro em1 
-            JOIN usuarios u1 ON em1.id_evaluador = u1.id 
-            WHERE em1.id_equipo_evaluado = e.id 
+            SELECT AVG(em1.puntaje_total)
+            FROM evaluaciones_maestro em1
+            JOIN usuarios u1 ON em1.id_evaluador = u1.id
+            WHERE em1.id_equipo_evaluado = e.id
             AND u1.es_docente = FALSE
         ) as promedio_estudiantes,
         (
-            SELECT em2.puntaje_total
-            FROM evaluaciones_maestro em2 
-            JOIN usuarios u2 ON em2.id_evaluador = u2.id 
-            WHERE em2.id_equipo_evaluado = e.id 
-            AND u2.es_docente = TRUE 
-            LIMIT 1
-        ) as nota_docente,
-        (
-            SELECT COUNT(em3.id) 
-            FROM evaluaciones_maestro em3 
-            JOIN usuarios u3 ON em3.id_evaluador = u3.id 
-            WHERE em3.id_equipo_evaluado = e.id 
+            SELECT COUNT(em3.id)
+            FROM evaluaciones_maestro em3
+            JOIN usuarios u3 ON em3.id_evaluador = u3.id
+            WHERE em3.id_equipo_evaluado = e.id
             AND u3.es_docente = FALSE
         ) as total_eval_estudiantes
-    FROM equipos e 
+    FROM equipos e
     WHERE e.id_curso = ?
     ORDER BY e.nombre_equipo ASC
 ";
@@ -131,6 +154,9 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 </button>
                 <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#resetModal">
                     Resetear Plataforma
+                </button>
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#docentesModal">
+                    Docentes y ponderaciones
                 </button>
                 <a href="gestionar_criterios.php" class="btn btn-info">
                     Gestionar Criterios
@@ -235,7 +261,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                         <?php
                             // Calcular puntaje final y nota
                             $promedio_est = $equipo['promedio_estudiantes']; // Valor de 0 a 100
-                            $nota_doc = $equipo['nota_docente']; // Valor de 0 a 100
+                            $nota_doc = obtener_puntaje_docente_ponderado($conn, $equipo['id'], $id_curso_activo); // Valor ponderado de 0 a 100
                             $puntaje_final_score = null;
                             $nota_final_grado = 'N/A';
 
@@ -245,8 +271,8 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                             // Solo calcular el puntaje final si la presentación ha terminado
                             if ($equipo['estado_presentacion'] == 'finalizado') {
                                 // Si no hay promedio de estudiantes, asumimos 0 (para no perder la nota docente)
-                                $promedio_est_final = ($promedio_est !== null) ? $promedio_est : 0; 
-                                
+                                $promedio_est_final = ($promedio_est !== null) ? $promedio_est : 0;
+
                                 if ($nota_doc !== null) {
                                     // Ponderación 50% estudiantes, 50% docente
                                     $puntaje_final_score = ($promedio_est_final * 0.5) + ($nota_doc * 0.5);
@@ -391,6 +417,91 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
         <input type="hidden" name="confirm" value="yes">
     </form>
 
+    <!-- Modal: Docentes y ponderaciones -->
+    <div class="modal fade" id="docentesModal" tabindex="-1" aria-labelledby="docentesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="docentesModalLabel">Docentes y ponderaciones</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="admin_actions.php" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="update_docente_weights">
+                        <h6>Docentes actuales del curso</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Ponderación (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $sql_docentes_actuales = "
+                                    SELECT u.id, u.nombre, u.email, dc.ponderacion
+                                    FROM docente_curso dc
+                                    JOIN usuarios u ON dc.id_docente = u.id
+                                    WHERE dc.id_curso = ?
+                                    ORDER BY u.nombre ASC
+                                ";
+                                $stmt_docentes_actuales = $conn->prepare($sql_docentes_actuales);
+                                $stmt_docentes_actuales->bind_param("i", $id_curso_activo);
+                                $stmt_docentes_actuales->execute();
+                                $docentes_actuales = $stmt_docentes_actuales->get_result();
+                                while ($docente = $docentes_actuales->fetch_assoc()) {
+                                    $ponderacion_porcentaje = $docente['ponderacion'] * 100;
+                                    echo "<tr>
+                                        <td>" . htmlspecialchars($docente['nombre']) . "</td>
+                                        <td>" . htmlspecialchars($docente['email']) . "</td>
+                                        <td>
+                                            <input type='number' class='form-control form-control-sm ponderacion-input' name='ponderaciones[" . $docente['id'] . "]' value='" . number_format($ponderacion_porcentaje, 0) . "' min='0' max='100' step='1'>
+                                        </td>
+                                    </tr>";
+                                }
+                                $stmt_docentes_actuales->close();
+                                ?>
+                            </tbody>
+                        </table>
+                        <hr>
+                        <h6>Agregar nuevos docentes</h6>
+                        <select name="nuevos_docentes[]" multiple class="form-select">
+                            <?php
+                            $sql_docentes_disponibles = "
+                                SELECT u.id, u.nombre, u.email
+                                FROM usuarios u
+                                WHERE u.es_docente = TRUE
+                                AND u.id NOT IN (
+                                    SELECT dc.id_docente
+                                    FROM docente_curso dc
+                                    WHERE dc.id_curso = ?
+                                )
+                                ORDER BY u.nombre ASC
+                            ";
+                            $stmt_docentes_disponibles = $conn->prepare($sql_docentes_disponibles);
+                            $stmt_docentes_disponibles->bind_param("i", $id_curso_activo);
+                            $stmt_docentes_disponibles->execute();
+                            $docentes_disponibles = $stmt_docentes_disponibles->get_result();
+                            while ($docente = $docentes_disponibles->fetch_assoc()) {
+                                echo "<option value='" . $docente['id'] . "'>" . htmlspecialchars($docente['nombre'] . ' (' . $docente['email'] . ')') . "</option>";
+                            }
+                            $stmt_docentes_disponibles->close();
+                            ?>
+                        </select>
+                        <small class="text-muted">Mantén presionado Ctrl (o Cmd en Mac) para seleccionar múltiples docentes.</small>
+                        <hr>
+                        <p>Suma actual: <span id="sumaPonderaciones">0</span>% <span id="estadoPonderaciones"></span></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">Guardar cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var confirmDeleteModal = document.getElementById('confirmDeleteModal');
@@ -431,6 +542,45 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
             const successModal = new bootstrap.Modal(document.getElementById('inviteSuccessModal'));
             successModal.show();
             <?php endif; ?>
+
+            // Función para calcular y actualizar la suma de ponderaciones
+            function actualizarSumaPonderaciones() {
+                const inputs = document.querySelectorAll('.ponderacion-input');
+                let suma = 0;
+                inputs.forEach(input => {
+                    suma += parseInt(input.value) || 0;
+                });
+                const sumaSpan = document.getElementById('sumaPonderaciones');
+                const estadoSpan = document.getElementById('estadoPonderaciones');
+                const submitBtn = document.getElementById('submitBtn');
+                sumaSpan.textContent = suma;
+                if (suma === 100) {
+                    estadoSpan.textContent = '(Correcto)';
+                    estadoSpan.style.color = 'green';
+                    submitBtn.disabled = false;
+                } else if (suma < 100) {
+                    estadoSpan.textContent = '(Falta)';
+                    estadoSpan.style.color = 'orange';
+                    submitBtn.disabled = true;
+                } else {
+                    estadoSpan.textContent = '(Exceso)';
+                    estadoSpan.style.color = 'red';
+                    submitBtn.disabled = true;
+                }
+            }
+
+            // Event listener para el modal de docentes
+            const docentesModal = document.getElementById('docentesModal');
+            docentesModal.addEventListener('shown.bs.modal', function () {
+                actualizarSumaPonderaciones();
+            });
+
+            // Event listeners para los inputs de ponderación
+            document.addEventListener('input', function (e) {
+                if (e.target.classList.contains('ponderacion-input')) {
+                    actualizarSumaPonderaciones();
+                }
+            });
         });
     </script>
 </body>

@@ -2,17 +2,48 @@
 require 'db.php';
 verificar_sesion(true);
 
+// Función para calcular la evaluación docente ponderada
+function obtener_puntaje_docente_ponderado($conn, $id_equipo, $id_curso) {
+    $sql = "
+        SELECT em.puntaje_total, dc.ponderacion
+        FROM evaluaciones_maestro em
+        JOIN usuarios u ON em.id_evaluador = u.id
+        JOIN docente_curso dc ON u.id = dc.id_docente AND dc.id_curso = em.id_curso
+        WHERE em.id_equipo_evaluado = ? AND em.id_curso = ? AND u.es_docente = TRUE
+    ";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $id_equipo, $id_curso);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $total_ponderado = 0;
+    $total_ponderacion = 0;
+
+    while ($row = $result->fetch_assoc()) {
+        $total_ponderado += $row['puntaje_total'] * $row['ponderacion'];
+        $total_ponderacion += $row['ponderacion'];
+    }
+
+    $stmt->close();
+
+    if ($total_ponderacion > 0) {
+        return $total_ponderado / $total_ponderacion;
+    } else {
+        return null; // No hay evaluaciones docentes
+    }
+}
+
 // Función para calcular nota basada en puntaje (escala 1-7)
 function calcular_nota_final($puntaje) {
     if ($puntaje === null) return "N/A";
-    
+
     // Asumiendo que el puntaje es de 1 a 100
     // Fórmula: Nota = 1.0 + (Puntaje / 100) * 6.0
     $nota = 1.0 + ($puntaje / 100) * 6.0;
-    
+
     if ($nota < 1.0) $nota = 1.0;
     if ($nota > 7.0) $nota = 7.0;
-    
+
     return number_format($nota, 1, ',', '.');
 }
 
@@ -44,13 +75,7 @@ $sql = "
             JOIN usuarios u1 ON em1.id_evaluador = u1.id 
             WHERE em1.id_equipo_evaluado = e.id AND u1.es_docente = FALSE
         ) as promedio_estudiantes, 
-        (
-            SELECT em2.puntaje_total 
-            FROM evaluaciones_maestro em2 
-            JOIN usuarios u2 ON em2.id_evaluador = u2.id 
-            WHERE em2.id_equipo_evaluado = e.id AND u2.es_docente = TRUE 
-            LIMIT 1
-        ) as nota_docente, 
+        obtener_puntaje_docente_ponderado(e.id, e.id_curso) as nota_docente,
         (
             SELECT COUNT(em3.id) 
             FROM evaluaciones_maestro em3 
