@@ -79,6 +79,23 @@ CREATE TABLE `docente_curso_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================
+-- TABLA: presentaciones_log
+-- ========================================
+CREATE TABLE `presentaciones_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_equipo` int(11) NOT NULL,
+  `id_curso` int(11) NOT NULL,
+  `timestamp_inicio` timestamp NULL DEFAULT NULL,
+  `timestamp_fin` timestamp NOT NULL DEFAULT current_timestamp(),
+  `duracion_minutos` int(11) DEFAULT NULL,
+  `titulo_presentacion` varchar(255) DEFAULT NULL,
+  `notas` text DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `id_equipo` (`id_equipo`),
+  KEY `id_curso` (`id_curso`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
 -- TABLA: criterios
 -- ========================================
 CREATE TABLE `criterios` (

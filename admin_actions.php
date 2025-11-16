@@ -85,6 +85,70 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
         exit();
     }
 
+    // --- NUEVA ACCIÓN: FINALIZAR PRESENTACIÓN Y ACTIVAR COEVALUACIÓN ---
+    elseif ($action === 'finalize_presentation') {
+        $id_equipo = (int)$_POST['id_equipo'];
+
+        if (!$id_curso_activo) {
+            header("Location: dashboard_docente.php?error=" . urlencode("Curso activo no disponible."));
+            exit();
+        }
+
+        // Validar que el equipo pertenece al curso activo y está presentando
+        $stmt_check = $conn->prepare("SELECT nombre_equipo, estado_presentacion FROM equipos WHERE id = ? AND id_curso = ?");
+        $stmt_check->bind_param("ii", $id_equipo, $id_curso_activo);
+        $stmt_check->execute();
+        $equipo = $stmt_check->get_result()->fetch_assoc();
+        $stmt_check->close();
+
+        if (!$equipo) {
+            header("Location: dashboard_docente.php?error=" . urlencode("Equipo no encontrado o no pertenece al curso activo."));
+            exit();
+        }
+
+        if ($equipo['estado_presentacion'] !== 'presentando') {
+            header("Location: dashboard_docente.php?error=" . urlencode("La presentación del equipo no está en curso."));
+            exit();
+        }
+
+        // Iniciar transacción
+        $conn->begin_transaction();
+        try {
+            $user_id = $_SESSION['id_usuario'];
+            $now = date('Y-m-d H:i:s');
+
+            // Guardar datos de la presentación antes de finalizar
+            $titulo_presentacion = "Presentación del Equipo " . $equipo['nombre_equipo'];
+            $stmt_log_presentacion = $conn->prepare("INSERT INTO presentaciones_log (id_equipo, id_curso, titulo_presentacion) VALUES (?, ?, ?)");
+            $stmt_log_presentacion->bind_param("iis", $id_equipo, $id_curso_activo, $titulo_presentacion);
+            $stmt_log_presentacion->execute();
+            $stmt_log_presentacion->close();
+
+            // Marcar presentación como finalizada
+            $stmt_update = $conn->prepare("UPDATE equipos SET estado_presentacion = 'finalizado' WHERE id = ? AND id_curso = ?");
+            $stmt_update->bind_param("ii", $id_equipo, $id_curso_activo);
+            $stmt_update->execute();
+            $stmt_update->close();
+
+            // Registrar log de auditoría
+            $detalle = "Finalizó presentación del equipo '" . $equipo['nombre_equipo'] . "' (ID: $id_equipo) e inició coevaluación";
+            $log_stmt = $conn->prepare("INSERT INTO logs (id_usuario, accion, detalle, fecha) VALUES (?, 'FINALIZAR_PRESENTACION', ?, ?)");
+            $log_stmt->bind_param("iss", $user_id, $detalle, $now);
+            $log_stmt->execute();
+            $log_stmt->close();
+
+            $conn->commit();
+
+            // Redirigir inmediatamente a la interfaz de coevaluación
+            header("Location: evaluar.php?id_equipo=$id_equipo");
+            exit();
+        } catch (Exception $e) {
+            $conn->rollback();
+            header("Location: dashboard_docente.php?error=" . urlencode("Error al finalizar presentación: " . $e->getMessage()));
+            exit();
+        }
+    }
+
     // --- NUEVA ACCIÓN: ACTUALIZAR PONDERACIONES DE DOCENTES ---
     elseif ($action === 'update_docente_weights') {
         if (!$id_curso_activo) {
