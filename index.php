@@ -39,6 +39,9 @@
                         <div class="text-center mt-3">
                             <a href="register_docente.php" class="text-decoration-none">¿Eres docente? Regístrate aquí</a>
                         </div>
+                                                <div class="text-center mt-2">
+                                                    <a href="dashboard_docente.php" class="text-decoration-none">Ir al Panel Docente</a>
+                                                </div>
                     </div>
                 </div>
             </div>

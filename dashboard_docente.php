@@ -200,25 +200,48 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
         <div class="row mb-4">
             <div class="col-md-6">
                 <div class="card shadow h-100">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Gestión de Estudiantes y Equipos</h5>
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">⭐ Importar Estudiantes por ID (CSV/Excel)</h5>
                     </div>
                     <div class="card-body">
-                        <p>Sube un archivo **CSV** con la lista de estudiantes y su equipo.</p>
+                        <p><strong>Formato requerido:</strong> ID, Nombre, Email</p>
+                        <p class="small text-muted">Soporta archivos <strong>CSV (.csv)</strong> y <strong>Excel (.xlsx)</strong>. Los estudiantes se asociarán automáticamente al curso activo.</p>
+                        <form action="import_students.php" method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="lista_estudiantes_id" class="form-label">Selecciona archivo CSV o Excel</label>
+                                <input class="form-control" type="file" id="lista_estudiantes_id" name="lista_estudiantes" accept=".csv,.xlsx" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100 fw-bold">📤 Importar Estudiantes</button>
+                        </form>
+                        <hr>
+                        <p class="text-muted small"><strong>Ejemplo (CSV):</strong></p>
+                        <pre class="bg-light p-2 small">ID,Nombre,Email
+20201234,Juan Pérez,jperez@alu.uct.cl
+20204567,Ana Gómez,agomez@alu.uct.cl</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Gestión de Equipos (Método Antiguo)</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Sube un archivo CSV con la lista de estudiantes y su equipo.</p>
                         <form action="upload.php" method="POST" enctype="multipart/form-data">
                             <div class="mb-3">
                                 <label for="lista_estudiantes" class="form-label">Archivo CSV (Nombre, Email, Equipo)</label>
                                 <input class="form-control" type="file" id="lista_estudiantes" name="lista_estudiantes" accept=".csv" required>
                             </div>
-                            <button type="submit" class="btn btn-success w-100">Subir y Procesar Lista</button>
+                            <button type="submit" class="btn btn-primary w-100">Subir y Procesar Lista</button>
                         </form>
                         <hr>
                         <p class="text-muted small">
                             Formato CSV requerido:
                             <br>
-                            `Nombre Apellido,correo@alu.uct.cl,Nombre Equipo`
+                            <code>Nombre Apellido,correo@alu.uct.cl,Nombre Equipo</code>
                             <br>
-                            Ejemplo: `Juan Perez,jperez@alu.uct.cl,Los Vengadores`
+                            Ejemplo: <code>Juan Perez,jperez@alu.uct.cl,Los Vengadores</code>
                         </p>
                     </div>
                 </div>

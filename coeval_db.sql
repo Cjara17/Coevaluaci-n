@@ -28,12 +28,14 @@ CREATE TABLE `usuarios` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` varchar(255) NOT NULL,
   `email` varchar(191) NOT NULL,
+  `student_id` varchar(100) DEFAULT NULL,
   `id_equipo` int(11) DEFAULT NULL,
   `es_docente` tinyint(1) DEFAULT 0,
   `password` varchar(255) DEFAULT NULL,
   `id_curso` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
+  UNIQUE KEY `idx_student_id` (`student_id`),
   KEY `id_equipo` (`id_equipo`),
   KEY `idx_id_curso` (`id_curso`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -172,8 +174,8 @@ CREATE TABLE `logs` (
 -- ========================================
 
 -- Insertar usuario docente
-INSERT INTO `usuarios` (`nombre`, `email`, `es_docente`, `password`, `id_equipo`, `id_curso`) 
-VALUES ('Docente Prueba', 'docente@uct.cl', 1, '$2y$10$5RFvZl7w.zP5YL7KDH.cTu0Jq6kU4kDH8Qj4qK3L9Q2M6N7O8P9Q', NULL, NULL);
+INSERT INTO `usuarios` (`nombre`, `email`, `student_id`, `es_docente`, `password`, `id_equipo`, `id_curso`) 
+VALUES ('Docente Prueba', 'docente@uct.cl', NULL, 1, '$2y$10$5RFvZl7w.zP5YL7KDH.cTu0Jq6kU4kDH8Qj4qK3L9Q2M6N7O8P9Q', NULL, NULL);
 
 -- Insertar cursos de prueba
 INSERT INTO `cursos` (`nombre_curso`, `semestre`, `anio`) 
@@ -206,13 +208,13 @@ VALUES
 ('Respuesta a Preguntas', 5, 1, 1);
 
 -- Insertar estudiantes
-INSERT INTO `usuarios` (`nombre`, `email`, `es_docente`, `password`, `id_equipo`, `id_curso`) 
+INSERT INTO `usuarios` (`nombre`, `email`, `student_id`, `es_docente`, `password`, `id_equipo`, `id_curso`) 
 VALUES 
-('Estudiante Prueba 1', 'estudiante@alu.uct.cl', 0, NULL, 1, 1),
-('Estudiante Prueba 2', 'estudiante2@alu.uct.cl', 0, NULL, 1, 1),
-('Estudiante Prueba 3', 'estudiante3@alu.uct.cl', 0, NULL, 2, 1),
-('Estudiante Prueba 4', 'estudiante4@alu.uct.cl', 0, NULL, 2, 1),
-('Estudiante Prueba 5', 'estudiante5@alu.uct.cl', 0, NULL, 3, 1);
+('Estudiante Prueba 1', 'estudiante@alu.uct.cl', NULL, 0, NULL, 1, 1),
+('Estudiante Prueba 2', 'estudiante2@alu.uct.cl', NULL, 0, NULL, 1, 1),
+('Estudiante Prueba 3', 'estudiante3@alu.uct.cl', NULL, 0, NULL, 2, 1),
+('Estudiante Prueba 4', 'estudiante4@alu.uct.cl', NULL, 0, NULL, 2, 1),
+('Estudiante Prueba 5', 'estudiante5@alu.uct.cl', NULL, 0, NULL, 3, 1);
 
 -- Insertar evaluaciones maestro
 INSERT INTO `evaluaciones_maestro` (`id_evaluador`, `id_equipo_evaluado`, `puntaje_total`, `id_curso`) 
