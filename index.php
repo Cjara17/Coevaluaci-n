@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<body class="silueta">
     <div class="container login-container">
         <div class="row justify-content-center w-100">
             <div class="col-md-8 col-lg-6">
@@ -39,6 +40,9 @@
                         <div class="text-center mt-3">
                             <a href="register_docente.php" class="text-decoration-none">¿Eres docente? Regístrate aquí</a>
                         </div>
+                                                <div class="text-center mt-2">
+                                                    <a href="dashboard_docente.php" class="text-decoration-none">Ir al Panel Docente</a>
+                                                </div>
                     </div>
                 </div>
             </div>

@@ -61,18 +61,45 @@ if (!$stmt_insert->execute()) {
 }
 $stmt_insert->close();
 
-// Enviar correo con credenciales
-$asunto = "Credenciales de acceso - Plataforma de Evaluación";
-$mensaje = "Hola,\n\nSe ha creado un perfil en la Plataforma de Evaluación con los siguientes datos:\n\n".
-           "Rol: " . ucfirst($tipo) . "\n".
-           "Correo: " . $email . "\n".
-           "Contraseña: " . $password . "\n\n".
-           "Puedes acceder desde: " . (isset($_SERVER['HTTP_HOST']) ? "http://{$_SERVER['HTTP_HOST']}/Coevaluaci-n/index.php" : "http://localhost/Coevaluaci-n/index.php") . "\n\n".
-           "Por favor, cambia la contraseña después de iniciar sesión.\n\n".
-           "Saludos,\nPlataforma de Evaluación";
+// Enviar correo con credenciales usando PHPMailer
+require_once __DIR__ . '/vendor/autoload.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
-$headers = "From: coeval.real@gmail.com\r\n";
-$correo_enviado = @mail($email, $asunto, $mensaje, $headers);
+$mail = new PHPMailer(true);
+
+try {
+    // Configuración del servidor SMTP desde .env
+    $mail->isSMTP();
+    $mail->Host = $_ENV['SMTP_HOST'] ?? 'smtp.example.com';
+    $mail->SMTPAuth = true;
+    $mail->Username = $_ENV['SMTP_USER'] ?? 'your_email@example.com';
+    $mail->Password = $_ENV['SMTP_PASS'] ?? 'your_password';
+    $mail->SMTPSecure = $_ENV['SMTP_ENCRYPTION'] ?? 'tls';
+    $mail->Port = (int)($_ENV['SMTP_PORT'] ?? 587);
+
+    // Remitente
+    $mail->setFrom($_ENV['FROM_EMAIL'] ?? 'noreply@uct.cl', $_ENV['FROM_NAME'] ?? 'Plataforma de Coevaluación');
+
+    // Destinatario
+    $mail->addAddress($email);
+
+    // Contenido
+    $mail->isHTML(false);
+    $mail->Subject = 'Credenciales de acceso - Plataforma de Evaluación';
+    $mail->Body = "Hola,\n\nSe ha creado un perfil en la Plataforma de Evaluación con los siguientes datos:\n\n" .
+                  "Rol: " . ucfirst($tipo) . "\n" .
+                  "Correo: " . $email . "\n" .
+                  "Contraseña: " . $password . "\n\n" .
+                  "Puedes acceder desde: " . (isset($_SERVER['HTTP_HOST']) ? "http://{$_SERVER['HTTP_HOST']}/Coevaluaci-n/index.php" : "http://localhost/Coevaluaci-n/index.php") . "\n\n" .
+                  "Por favor, cambia la contraseña después de iniciar sesión.\n\n" .
+                  "Saludos,\nPlataforma de Evaluación";
+
+    $mail->send();
+    $correo_enviado = true;
+} catch (Exception $e) {
+    $correo_enviado = false;
+}
 
 if (!$correo_enviado) {
     header("Location: dashboard_docente.php?invite_error=" . urlencode("Perfil creado, pero ocurrió un problema al enviar las credenciales por correo. Verifica la configuración de correo del servidor."));

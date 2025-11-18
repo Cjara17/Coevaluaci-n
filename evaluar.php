@@ -49,6 +49,7 @@ $criterios = $stmt_criterios->get_result();
         <p>Evalúa cada criterio de 1 (deficiente) a 5 (excelente).</p>
 
         <form action="procesar_evaluacion.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
             <input type="hidden" name="id_equipo_evaluado" value="<?php echo $id_equipo_a_evaluar; ?>">
             <table class="table table-striped table-bordered">
                 <thead class="table-dark"><tr><th>Criterio</th><th class="text-center" colspan="5">Puntaje</th></tr></thead>

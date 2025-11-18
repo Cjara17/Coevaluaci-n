@@ -55,7 +55,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : (iss
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="dashboard_docente.php">
-                <img src="logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
+                <img src="img/logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
                 Panel Docente
             </a>
             <div class="d-flex me-4">

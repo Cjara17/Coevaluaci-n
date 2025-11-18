@@ -127,7 +127,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="dashboard_docente.php">
-                <img src="logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
+                <img src="img/logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
                 Panel Docente
             </a>
             <div class="d-flex me-4">
@@ -179,6 +179,27 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
             <div class="alert alert-danger"><?php echo $invite_error; ?></div>
         <?php endif; ?>
 
+        <?php
+        // Mostrar alertas de actualizaciones si existe el archivo update_alerts.log
+        $alerts_file = __DIR__ . '/tools/update_alerts.log';
+        if (file_exists($alerts_file)) {
+            $alerts = file($alerts_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            if (!empty($alerts)) {
+                echo '<div class="alert alert-warning alert-dismissible fade show" role="alert" style="border-left: 4px solid #ffc107; background-color: #fff3cd; color: #856404;">';
+                echo '<strong>⚠️ Alertas de Actualizaciones:</strong><br>';
+                echo '<ul class="mb-0">';
+                foreach ($alerts as $alert) {
+                    // Remover timestamp para mostrar solo el mensaje
+                    $message = preg_replace('/^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] /', '', $alert);
+                    echo '<li>' . htmlspecialchars($message) . '</li>';
+                }
+                echo '</ul>';
+                echo '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                echo '</div>';
+            }
+        }
+        ?>
+
         <div class="modal fade" id="resetModal" tabindex="-1" aria-labelledby="resetModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -205,6 +226,38 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
         <div class="row mb-4">
             <div class="col-md-6">
                 <div class="card shadow h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Importar Estudiantes por ID (CSV/Excel)</h5>
+                    </div>
+                    <div class="card-body">
+                        <?php
+                        $zipDisponible = extension_loaded('zip') && class_exists('ZipArchive');
+                        ?>
+                        <p><strong>Formato requerido:</strong> ID, Nombre, Email</p>
+                        <p class="small text-muted">Soporta archivos <strong>CSV (.csv)</strong><?php echo $zipDisponible ? ' y <strong>Excel (.xlsx)</strong>' : ''; ?>. Los estudiantes se asociarán automáticamente al curso activo.</p>
+                        <?php if (!$zipDisponible): ?>
+                            <div class="alert alert-warning mb-3">
+                                <strong>⚠️ Nota:</strong> Los archivos Excel (.xlsx) no están disponibles porque la extensión ZipArchive no está habilitada. 
+                                Por favor, use archivos <strong>CSV</strong> o <a href="verificar_zip.php" target="_blank">habilite ZipArchive</a>.
+                            </div>
+                        <?php endif; ?>
+                        <form action="import_students.php" method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="lista_estudiantes_id" class="form-label">Selecciona archivo CSV<?php echo $zipDisponible ? ' o Excel' : ''; ?></label>
+                                <input class="form-control" type="file" id="lista_estudiantes_id" name="lista_estudiantes" accept="<?php echo $zipDisponible ? '.csv,.xlsx' : '.csv'; ?>" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100 fw-bold">Importar Estudiantes</button>
+                        </form>
+                        <hr>
+                        <p class="text-muted small"><strong>Ejemplo (CSV):</strong></p>
+                        <pre class="bg-light p-2 small">ID,Nombre,Email
+20201234,Juan Pérez,jperez@alu.uct.cl
+20204567,Ana Gómez,agomez@alu.uct.cl</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">Gestión de Estudiantes y Equipos</h5>
                     </div>
@@ -224,7 +277,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                                 <label for="lista_estudiantes" class="form-label">Archivo CSV<?php echo $zipDisponible ? ' o Excel' : ''; ?> (Nombre, Email, Equipo)</label>
                                 <input class="form-control" type="file" id="lista_estudiantes" name="lista_estudiantes" accept="<?php echo $zipDisponible ? '.csv,.xlsx' : '.csv'; ?>" required>
                             </div>
-                            <button type="submit" class="btn btn-success w-100">Subir y Procesar Lista</button>
+                            <button type="submit" class="btn btn-primary w-100">Subir y Procesar Lista</button>
                         </form>
                         <hr>
                         <p class="text-muted small">

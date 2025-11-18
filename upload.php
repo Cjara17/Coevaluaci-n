@@ -28,7 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['lista_estudiantes']))
         header("Location: dashboard_docente.php?status=" . urlencode("Error al subir archivo (Código: " . $_FILES['lista_estudiantes']['error'] . ")"));
         exit();
     }
-    
+
     $extension = strtolower(pathinfo($nombreArchivo, PATHINFO_EXTENSION));
     $es_csv = $extension === 'csv';
     $es_xlsx = in_array($extension, ['xlsx', 'xls'], true);
@@ -42,6 +42,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['lista_estudiantes']))
     if ($es_xlsx && !$zipDisponible) {
         header("Location: dashboard_docente.php?status=" . urlencode("Error: Los archivos Excel (.xlsx) requieren la extensión ZipArchive. Por favor, use un archivo CSV o habilite la extensión php_zip en XAMPP. Consulte INSTRUCCIONES_ZIP.txt o visite verificar_zip.php para más detalles."));
         exit();
+    }
+
+    // Validación adicional de MIME type usando finfo_file (solo para CSV)
+    if ($es_csv && function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime_type = finfo_file($finfo, $archivo);
+        finfo_close($finfo);
+        $allowed_mime_types = ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'];
+        if (!in_array($mime_type, $allowed_mime_types)) {
+            header("Location: dashboard_docente.php?status=" . urlencode("Error: El archivo no es un CSV válido."));
+            exit();
+        }
     }
 
     $registros_procesados = 0;
