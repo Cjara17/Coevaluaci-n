@@ -1,3 +1,33 @@
+# 📋 RESUMEN DE CAMBIOS - Evaluaciones cualitativas
+
+**Fecha:** 18 de noviembre de 2025  
+**Objetivo:** Permitir evaluaciones cualitativas personalizables que convivan con las evaluaciones numéricas existentes.
+
+---
+
+## ✅ Entregables principales
+
+- **Nuevo esquema**: tablas `escalas_cualitativas`, `conceptos_cualitativos`, `evaluaciones_cualitativas` y `evaluaciones_cualitativas_detalle` añadidas tanto a `coeval_db.sql` como al runtime (`qualitative_helpers.php`).
+- **Gestión docente**:
+  - Página `gestionar_conceptos.php` para personalizar conceptos, colores y orden por curso.
+  - Acciones centralizadas en `conceptos_actions.php` con trazabilidad en tabla `logs`.
+- **Evaluación**:
+  - Flujo nuevo `evaluar_cualitativo.php` + `procesar_evaluacion_cualitativa.php` exclusivo para docentes.
+  - `evaluar.php` ahora respeta el curso del equipo al cargar criterios.
+- **Visualización**:
+- **Carga de estudiantes**:
+  - `upload.php` acepta archivos CSV y Excel (.xlsx) usando un lector propio (`libs/SimpleXlsxReader.php`).
+  - El formulario en `dashboard_docente.php` y los mensajes de ayuda fueron actualizados para reflejar el nuevo soporte.
+  - `dashboard_docente.php` muestra estado y feed de evaluaciones cualitativas manteniendo privacidad (oculta nombres por defecto).
+  - `ver_detalles.php` incorpora un acordeón con las evaluaciones cualitativas por criterio.
+- **Infraestructura**:
+  - `db.php` carga `qualitative_helpers.php`, garantizando la creación de tablas.
+  - Datos seed actualizados con escala y evaluación cualitativa de referencia.
+
+Pruebas manuales: creación/edición de conceptos, registro de evaluación cualitativa, visualización en dashboard y detalle de equipo.
+
+---
+
 # 📋 RESUMEN DE CAMBIOS - Refactorización de BD y Archivos PHP
 
 **Fecha:** 12 de noviembre de 2025  

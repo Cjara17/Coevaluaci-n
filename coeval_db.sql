@@ -151,6 +151,78 @@ CREATE TABLE `evaluaciones_detalle` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================
+-- TABLA: escalas_cualitativas
+-- ========================================
+CREATE TABLE `escalas_cualitativas` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_curso` int(11) NOT NULL,
+  `nombre` varchar(120) NOT NULL,
+  `descripcion` text DEFAULT NULL,
+  `es_principal` tinyint(1) NOT NULL DEFAULT 1,
+  `creado_por` int(11) DEFAULT NULL,
+  `creado_en` timestamp NOT NULL DEFAULT current_timestamp(),
+  `actualizado_en` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_escala_curso` (`id_curso`),
+  CONSTRAINT `escalas_cualitativas_ibfk_1` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
+-- TABLA: conceptos_cualitativos
+-- ========================================
+CREATE TABLE `conceptos_cualitativos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_escala` int(11) NOT NULL,
+  `etiqueta` varchar(80) NOT NULL,
+  `descripcion` text DEFAULT NULL,
+  `color_hex` varchar(7) DEFAULT '#0d6efd',
+  `peso` decimal(5,2) DEFAULT NULL,
+  `orden` int(11) NOT NULL DEFAULT 0,
+  `activo` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `idx_concepto_escala` (`id_escala`),
+  CONSTRAINT `conceptos_cualitativos_ibfk_1` FOREIGN KEY (`id_escala`) REFERENCES `escalas_cualitativas` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
+-- TABLA: evaluaciones_cualitativas
+-- ========================================
+CREATE TABLE `evaluaciones_cualitativas` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_evaluador` int(11) NOT NULL,
+  `id_equipo_evaluado` int(11) NOT NULL,
+  `id_curso` int(11) NOT NULL,
+  `id_escala` int(11) NOT NULL,
+  `observaciones` text DEFAULT NULL,
+  `fecha_evaluacion` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_eval_qualitativa` (`id_evaluador`,`id_equipo_evaluado`,`id_curso`),
+  KEY `idx_equipo_cualitativo` (`id_equipo_evaluado`),
+  CONSTRAINT `evaluaciones_cualitativas_ibfk_1` FOREIGN KEY (`id_evaluador`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `evaluaciones_cualitativas_ibfk_2` FOREIGN KEY (`id_equipo_evaluado`) REFERENCES `equipos` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `evaluaciones_cualitativas_ibfk_3` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `evaluaciones_cualitativas_ibfk_4` FOREIGN KEY (`id_escala`) REFERENCES `escalas_cualitativas` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
+-- TABLA: evaluaciones_cualitativas_detalle
+-- ========================================
+CREATE TABLE `evaluaciones_cualitativas_detalle` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_evaluacion` int(11) NOT NULL,
+  `id_criterio` int(11) NOT NULL,
+  `id_concepto` int(11) NOT NULL,
+  `ponderacion_aplicada` decimal(5,2) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_det_eval` (`id_evaluacion`),
+  KEY `idx_det_criterio` (`id_criterio`),
+  KEY `idx_det_concepto` (`id_concepto`),
+  CONSTRAINT `evaluaciones_cualitativas_detalle_ibfk_1` FOREIGN KEY (`id_evaluacion`) REFERENCES `evaluaciones_cualitativas` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `evaluaciones_cualitativas_detalle_ibfk_2` FOREIGN KEY (`id_criterio`) REFERENCES `criterios` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `evaluaciones_cualitativas_detalle_ibfk_3` FOREIGN KEY (`id_concepto`) REFERENCES `conceptos_cualitativos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
 -- TABLA: logs
 -- ========================================
 CREATE TABLE `logs` (
@@ -227,6 +299,32 @@ VALUES
 (1, 1, 17),(1, 2, 18),(1, 3, 16),(1, 4, 17),(1, 5, 17),
 (2, 1, 18),(2, 2, 19),(2, 3, 18),(2, 4, 18),(2, 5, 17),
 (3, 1, 15),(3, 2, 16),(3, 3, 16),(3, 4, 15),(3, 5, 16);
+
+-- Escalas cualitativas por defecto
+INSERT INTO `escalas_cualitativas` (`id_curso`, `nombre`, `descripcion`, `es_principal`, `creado_por`)
+VALUES
+(1, 'Escala cualitativa estándar', 'Escala base con cuatro descriptores', 1, 1);
+
+-- Conceptos asociados a la escala anterior
+INSERT INTO `conceptos_cualitativos` (`id_escala`, `etiqueta`, `descripcion`, `color_hex`, `orden`, `activo`)
+VALUES
+(1, 'Excelente', 'Desempeño sobresaliente, supera expectativas.', '#198754', 1, 1),
+(1, 'Bueno', 'Cumple los criterios con solvencia.', '#0d6efd', 2, 1),
+(1, 'Regular', 'Cumple mínimamente, con oportunidades de mejora.', '#ffc107', 3, 1),
+(1, 'Necesita Mejorar', 'Requiere ajustes importantes.', '#dc3545', 4, 1);
+
+-- Evaluación cualitativa de referencia
+INSERT INTO `evaluaciones_cualitativas` (`id_evaluador`, `id_equipo_evaluado`, `id_curso`, `id_escala`, `observaciones`)
+VALUES
+(1, 1, 1, 1, 'Retroalimentación de ejemplo para el equipo A.');
+
+INSERT INTO `evaluaciones_cualitativas_detalle` (`id_evaluacion`, `id_criterio`, `id_concepto`)
+VALUES
+(1, 1, 1),
+(1, 2, 2),
+(1, 3, 2),
+(1, 4, 3),
+(1, 5, 2);
 
 COMMIT;
 

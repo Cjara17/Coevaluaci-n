@@ -93,6 +93,8 @@ $stmt_equipos->bind_param("i", $id_curso_activo);
 $stmt_equipos->execute();
 $equipos = $stmt_equipos->get_result();
 
+$qualitative_feed = get_course_qualitative_feed($conn, $id_curso_activo, 6);
+
 // 4. FUNCIÓN PARA CALCULAR LA NOTA FINAL PONDERADA Y LA NOTA EN ESCALA 1-7
 // Escala Chilena (asumiendo puntaje max. 100)
 function calcular_nota_final($puntaje) {
@@ -148,7 +150,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
             <h1>
                 Curso Activo: <?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' ' . $curso_activo['semestre'] . '-' . $curso_activo['anio']); ?>
             </h1>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap justify-content-end">
                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#inviteModal">
                     Agregar invitado
                 </button>
@@ -160,6 +162,9 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 </button>
                 <a href="gestionar_criterios.php" class="btn btn-info">
                     Gestionar Criterios
+                </a>
+                <a href="gestionar_conceptos.php" class="btn btn-outline-info">
+                    Conceptos Cualitativos
                 </a>
             </div>
         </div>
@@ -204,21 +209,27 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                         <h5 class="mb-0">Gestión de Estudiantes y Equipos</h5>
                     </div>
                     <div class="card-body">
-                        <p>Sube un archivo **CSV** con la lista de estudiantes y su equipo.</p>
+                        <?php
+                        $zipDisponible = extension_loaded('zip') && class_exists('ZipArchive');
+                        ?>
+                        <p>Sube un archivo <strong>CSV</strong><?php echo $zipDisponible ? ' o <strong>Excel (.xlsx)</strong>' : ''; ?> con la lista de estudiantes y su equipo.</p>
+                        <?php if (!$zipDisponible): ?>
+                            <div class="alert alert-warning mb-3">
+                                <strong>⚠️ Nota:</strong> Los archivos Excel (.xlsx) no están disponibles porque la extensión ZipArchive no está habilitada. 
+                                Por favor, use archivos <strong>CSV</strong> o <a href="verificar_zip.php" target="_blank">habilite ZipArchive</a>.
+                            </div>
+                        <?php endif; ?>
                         <form action="upload.php" method="POST" enctype="multipart/form-data">
                             <div class="mb-3">
-                                <label for="lista_estudiantes" class="form-label">Archivo CSV (Nombre, Email, Equipo)</label>
-                                <input class="form-control" type="file" id="lista_estudiantes" name="lista_estudiantes" accept=".csv" required>
+                                <label for="lista_estudiantes" class="form-label">Archivo CSV<?php echo $zipDisponible ? ' o Excel' : ''; ?> (Nombre, Email, Equipo)</label>
+                                <input class="form-control" type="file" id="lista_estudiantes" name="lista_estudiantes" accept="<?php echo $zipDisponible ? '.csv,.xlsx' : '.csv'; ?>" required>
                             </div>
                             <button type="submit" class="btn btn-success w-100">Subir y Procesar Lista</button>
                         </form>
                         <hr>
                         <p class="text-muted small">
-                            Formato CSV requerido:
-                            <br>
-                            `Nombre Apellido,correo@alu.uct.cl,Nombre Equipo`
-                            <br>
-                            Ejemplo: `Juan Perez,jperez@alu.uct.cl,Los Vengadores`
+                            Orden de columnas esperado: <strong>Nombre, Correo institucional y Equipo</strong>. Ejemplo:
+                            <br><code>Juan Perez,jperez@alu.uct.cl,Los Vengadores</code>
                         </p>
                     </div>
                 </div>
@@ -252,6 +263,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                     <th class="text-center">Nota Docente (0-100)</th>
                     <th class="text-center">Puntaje Final (0-100)</th>
                     <th class="text-center">Nota Final (1.0-7.0)</th>
+                    <th class="text-center">Eval. Cualitativa</th>
                     <th class="text-center">Acciones</th>
                 </tr>
             </thead>
@@ -284,6 +296,10 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                             } else {
                                 $puntaje_final_score = 'Pendiente';
                             }
+
+                            $qual_summary = get_latest_qualitative_summary($conn, (int)$equipo['id'], $id_curso_activo);
+                            $qual_total = isset($qual_summary['total']) ? (int)$qual_summary['total'] : 0;
+                            $qual_last = (!empty($qual_summary['ultima_fecha'])) ? date("d/m H:i", strtotime($qual_summary['ultima_fecha'])) : null;
                         ?>
                     <tr>
                         <td><strong><?php echo htmlspecialchars($equipo['nombre_equipo']); ?></strong></td>
@@ -305,6 +321,14 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                         <td class="text-center fw-bold text-primary"><?php echo $puntaje_final_score; ?></td>
                         <td class="text-center fw-bold text-danger"><?php echo $nota_final_grado; ?></td>
                         <td class="text-center">
+                            <?php if ($qual_total > 0): ?>
+                                <span class="badge bg-success"><?php echo $qual_total; ?> registro<?php echo $qual_total > 1 ? 's' : ''; ?></span>
+                                <div class="small text-muted">Última: <?php echo $qual_last ? $qual_last : 'N/D'; ?></div>
+                            <?php else: ?>
+                                <span class="badge bg-secondary">Sin registros</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="text-center">
                             <form action="gestionar_presentacion.php" method="POST" class="d-inline">
                                 <input type="hidden" name="id_equipo" value="<?php echo $equipo['id']; ?>">
                                 <?php if ($equipo['estado_presentacion'] == 'pendiente'): ?>
@@ -317,16 +341,67 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                             </form>
 
                             <a href="ver_detalles.php?id=<?php echo $equipo['id']; ?>" class="btn btn-sm btn-info ms-2">Detalles</a>
+                            <a href="evaluar_cualitativo.php?id_equipo=<?php echo $equipo['id']; ?>" class="btn btn-sm btn-outline-secondary ms-2 mt-2">Eval. cualitativa</a>
                         </td>
                     </tr>
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="7" class="text-center">No hay equipos registrados para este curso. Sube la lista de estudiantes.</td>
+                        <td colspan="8" class="text-center">No hay equipos registrados para este curso. Sube la lista de estudiantes.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
         </table>
+
+        <div class="mt-5">
+            <h3>Últimas evaluaciones cualitativas</h3>
+            <?php if (!empty($qualitative_feed)): ?>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Equipo</th>
+                                <th>Resumen</th>
+                                <th>Observaciones</th>
+                                <th>Fecha</th>
+                                <th class="text-center">Privacidad</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($qualitative_feed as $feed): ?>
+                                <?php
+                                    $obs = $feed['observaciones'] ?? '';
+                                    $obs_display = $obs ? mb_strimwidth($obs, 0, 120, '…', 'UTF-8') : 'Sin comentarios';
+                                ?>
+                                <tr>
+                                    <td><strong><?php echo htmlspecialchars($feed['nombre_equipo']); ?></strong></td>
+                                    <td>
+                                        <span class="badge bg-info text-dark"><?php echo (int)$feed['total_items']; ?> criterios</span>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($obs_display); ?></td>
+                                    <td><?php echo date("d/m/Y H:i", strtotime($feed['fecha_evaluacion'])); ?></td>
+                                    <td class="text-center">
+                                        <div class="small text-muted">
+                                            Evaluador:
+                                            <span class="evaluador-obfus fw-bold" data-name="<?php echo htmlspecialchars($feed['nombre_evaluador']); ?>">•••••••</span>
+                                        </div>
+                                        <button type="button" class="btn btn-link btn-sm toggle-evaluador" data-target-name="<?php echo htmlspecialchars($feed['nombre_evaluador']); ?>">
+                                            Mostrar
+                                        </button>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="ver_detalles.php?id=<?php echo $feed['id_equipo_evaluado']; ?>" class="btn btn-sm btn-outline-primary">Ver equipo</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <div class="alert alert-light border">Aún no hay evaluaciones cualitativas registradas en este curso.</div>
+            <?php endif; ?>
+        </div>
 
         <div style="height: 120px;"></div>
 
@@ -580,6 +655,23 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 if (e.target.classList.contains('ponderacion-input')) {
                     actualizarSumaPonderaciones();
                 }
+            });
+
+            document.querySelectorAll('.toggle-evaluador').forEach(function(btn) {
+                btn.addEventListener('click', function () {
+                    const wrapper = btn.parentElement;
+                    const span = wrapper.querySelector('.evaluador-obfus');
+                    if (!span) return;
+                    const original = span.getAttribute('data-name') || '';
+                    const oculto = '•••••••';
+                    if (span.textContent === oculto) {
+                        span.textContent = original || 'N/D';
+                        btn.textContent = 'Ocultar';
+                    } else {
+                        span.textContent = oculto;
+                        btn.textContent = 'Mostrar';
+                    }
+                });
             });
         });
     </script>

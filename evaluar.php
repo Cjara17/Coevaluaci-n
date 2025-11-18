@@ -13,13 +13,27 @@ if (!$_SESSION['es_docente'] && $id_equipo_a_evaluar == $_SESSION['id_equipo']) 
     header("Location: dashboard_estudiante.php"); exit();
 }
 
-$stmt = $conn->prepare("SELECT nombre_equipo FROM equipos WHERE id = ?");
+$stmt = $conn->prepare("SELECT nombre_equipo, id_curso FROM equipos WHERE id = ?");
 $stmt->bind_param("i", $id_equipo_a_evaluar);
 $stmt->execute();
 $equipo = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
-// Obtener solo los criterios ACTIVOS de la base de datos
-$criterios = $conn->query("SELECT * FROM criterios WHERE activo = TRUE ORDER BY orden ASC");
+if (!$equipo) {
+    header("Location: dashboard_estudiante.php?error=" . urlencode("Equipo no encontrado."));
+    exit();
+}
+
+$id_curso_equipo = (int)$equipo['id_curso'];
+if (!isset($_SESSION['id_curso_activo']) || $_SESSION['id_curso_activo'] != $id_curso_equipo) {
+    $_SESSION['id_curso_activo'] = $id_curso_equipo;
+}
+
+$stmt_criterios = $conn->prepare("SELECT * FROM criterios WHERE activo = TRUE AND id_curso = ? ORDER BY orden ASC");
+$stmt_criterios->bind_param("i", $id_curso_equipo);
+$stmt_criterios->execute();
+$criterios = $stmt_criterios->get_result();
+
 ?>
 <!DOCTYPE html>
 <html lang="es">

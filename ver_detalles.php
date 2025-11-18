@@ -151,6 +151,48 @@ $stmt_promedio->close();
 
 $nota_final = calcular_nota_final($promedio_general);
 
+// ----------------------------------------------------------------------
+// 5. EVALUACIONES CUALITATIVAS
+// ----------------------------------------------------------------------
+$sql_eval_cual = "
+    SELECT ec.id,
+           ec.fecha_evaluacion,
+           ec.observaciones,
+           u.nombre AS nombre_evaluador,
+           ec.id_escala
+    FROM evaluaciones_cualitativas ec
+    JOIN usuarios u ON ec.id_evaluador = u.id
+    WHERE ec.id_equipo_evaluado = ? AND ec.id_curso = ?
+    ORDER BY ec.fecha_evaluacion DESC
+";
+$stmt_eval_cual = $conn->prepare($sql_eval_cual);
+$stmt_eval_cual->bind_param("ii", $id_equipo, $id_curso_activo);
+$stmt_eval_cual->execute();
+$result_eval_cual = $stmt_eval_cual->get_result();
+
+$evaluaciones_cualitativas = [];
+while ($row = $result_eval_cual->fetch_assoc()) {
+    $stmt_det_cual = $conn->prepare("
+        SELECT d.id_criterio,
+               c.descripcion AS criterio,
+               cc.etiqueta AS concepto,
+               cc.color_hex
+        FROM evaluaciones_cualitativas_detalle d
+        JOIN criterios c ON d.id_criterio = c.id
+        JOIN conceptos_cualitativos cc ON d.id_concepto = cc.id
+        WHERE d.id_evaluacion = ?
+        ORDER BY c.orden ASC
+    ");
+    $stmt_det_cual->bind_param("i", $row['id']);
+    $stmt_det_cual->execute();
+    $detalles = $stmt_det_cual->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt_det_cual->close();
+
+    $row['detalles'] = $detalles;
+    $evaluaciones_cualitativas[] = $row;
+}
+$stmt_eval_cual->close();
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -272,6 +314,59 @@ $nota_final = calcular_nota_final($promedio_general);
             </div>
         <?php else: ?>
             <div class="alert alert-info">Aún no hay evaluaciones registradas para este equipo en el curso activo.</div>
+        <?php endif; ?>
+
+        <h2 class="mt-5">Evaluaciones cualitativas</h2>
+        <?php if (!empty($evaluaciones_cualitativas)): ?>
+            <div class="accordion" id="accordionCualitativas">
+                <?php foreach ($evaluaciones_cualitativas as $index => $eval): ?>
+                    <?php $collapseId = 'qual-' . $eval['id']; ?>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading-<?php echo $collapseId; ?>">
+                            <button class="accordion-button <?php echo $index === 0 ? '' : 'collapsed'; ?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<?php echo $collapseId; ?>" aria-expanded="<?php echo $index === 0 ? 'true' : 'false'; ?>" aria-controls="collapse-<?php echo $collapseId; ?>">
+                                <div class="w-100">
+                                    <div class="d-flex justify-content-between">
+                                        <span><strong><?php echo htmlspecialchars($eval['nombre_evaluador']); ?></strong></span>
+                                        <small class="text-muted"><?php echo date("d/m/Y H:i", strtotime($eval['fecha_evaluacion'])); ?></small>
+                                    </div>
+                                    <small class="text-muted">Observaciones: <?php echo $eval['observaciones'] ? htmlspecialchars(mb_strimwidth($eval['observaciones'], 0, 90, '…', 'UTF-8')) : 'Sin comentarios'; ?></small>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse-<?php echo $collapseId; ?>" class="accordion-collapse collapse <?php echo $index === 0 ? 'show' : ''; ?>" aria-labelledby="heading-<?php echo $collapseId; ?>" data-bs-parent="#accordionCualitativas">
+                            <div class="accordion-body">
+                                <?php if (!empty($eval['observaciones'])): ?>
+                                    <p><strong>Observaciones:</strong> <?php echo nl2br(htmlspecialchars($eval['observaciones'])); ?></p>
+                                <?php endif; ?>
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Criterio</th>
+                                                <th>Concepto asignado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($eval['detalles'] as $detalle): ?>
+                                                <tr>
+                                                    <td><?php echo htmlspecialchars($detalle['criterio']); ?></td>
+                                                    <td>
+                                                        <span class="badge text-white" style="background-color: <?php echo htmlspecialchars($detalle['color_hex']); ?>;">
+                                                            <?php echo htmlspecialchars($detalle['concepto']); ?>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-secondary">No hay evaluaciones cualitativas registradas todavía.</div>
         <?php endif; ?>
     </div>
 </body>

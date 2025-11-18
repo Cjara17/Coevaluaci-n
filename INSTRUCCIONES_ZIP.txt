@@ -1,0 +1,80 @@
+===========================================
+INSTRUCCIONES PARA HABILITAR ZIPARCHIVE EN XAMPP
+===========================================
+
+El error "La extensión ZipArchive no está habilitada" ocurre porque la extensión php_zip no está activa en su instalación de XAMPP.
+
+PASO 1: ENCONTRAR EL ARCHIVO PHP.INI CORRECTO
+---------------------------------------------
+
+Antes de editar, debe encontrar el archivo php.ini que está usando PHP:
+
+1. Acceda a: http://localhost/Coevaluaci-n/info_php.php
+   Este script le mostrará la ruta exacta del archivo php.ini que debe editar.
+
+2. O desde el panel de control de XAMPP:
+   - Haga clic en "Config" junto a Apache
+   - Seleccione "PHP (php.ini)"
+   - Se abrirá el archivo correcto en el editor
+
+PASO 2: BUSCAR O AGREGAR LA LÍNEA
+----------------------------------
+
+OPCIÓN A: Si encuentra la línea (puede estar comentada):
+   
+   Busque en el archivo:
+   ;extension=zip
+   
+   O también puede aparecer como:
+   extension=zip
+   
+   Si tiene punto y coma (;) al inicio, elimínelo:
+   extension=zip
+
+OPCIÓN B: Si NO encuentra la línea (más común):
+   
+   1. Busque la sección [Extensions] en el archivo
+      (Presione Ctrl+F y busque "[Extensions]")
+   
+   2. O busque otras líneas que digan "extension="
+      (Por ejemplo: extension=mysqli, extension=mbstring, etc.)
+   
+   3. Agregue esta línea al final de esa sección:
+      extension=zip
+   
+   4. Asegúrese de que NO tenga punto y coma (;) al inicio
+
+PASO 3: GUARDAR Y REINICIAR
+----------------------------
+
+1. Guarde el archivo php.ini (Ctrl+S)
+
+2. Reinicie Apache desde el panel de control de XAMPP:
+   - Haga clic en "Stop" junto a Apache
+   - Espere unos segundos
+   - Haga clic en "Start" junto a Apache
+
+PASO 4: VERIFICAR
+-----------------
+
+1. Acceda a: http://localhost/Coevaluaci-n/verificar_zip.php
+   Debe mostrar que ZipArchive está habilitado ✓
+
+2. O recargue el dashboard del docente
+   Ya no debería aparecer la advertencia sobre Excel
+
+ALTERNATIVA (Si no puede modificar php.ini):
+---------------------------------------------
+
+Si no tiene permisos para modificar php.ini, puede usar solo archivos CSV en lugar de Excel (.xlsx).
+Los archivos CSV funcionan sin necesidad de la extensión ZipArchive.
+
+NOTA IMPORTANTE:
+----------------
+
+Si después de seguir estos pasos ZipArchive sigue sin funcionar:
+- Verifique que el archivo php_zip.dll existe en la carpeta de extensiones
+- Asegúrese de haber reiniciado Apache correctamente
+- Use el script info_php.php para ver información detallada del sistema
+
+===========================================

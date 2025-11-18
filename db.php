@@ -47,6 +47,37 @@ if ($conn->connect_error) {
     // echo "<h1>✅ CONEXIÓN EXITOSA! ✅</h1>"; 
 }
 
+require_once __DIR__ . '/qualitative_helpers.php';
+ensure_qualitative_schema($conn);
+
+if (!function_exists('ensure_logs_table')) {
+    function ensure_logs_table(mysqli $conn): void
+    {
+        $sql = "
+            CREATE TABLE IF NOT EXISTS logs (
+                id INT(11) NOT NULL AUTO_INCREMENT,
+                id_usuario INT(11) NOT NULL,
+                accion VARCHAR(50) NOT NULL,
+                detalle TEXT DEFAULT NULL,
+                fecha DATETIME NOT NULL,
+                PRIMARY KEY (id),
+                KEY idx_logs_usuario (id_usuario),
+                CONSTRAINT fk_logs_usuario
+                    FOREIGN KEY (id_usuario)
+                    REFERENCES usuarios (id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ";
+
+        if (!$conn->query($sql)) {
+            error_log('[LogsTable] Error creando tabla logs: ' . $conn->error);
+        }
+    }
+}
+
+ensure_logs_table($conn);
+
 // Función para redirigir si el usuario no está logueado
 function verificar_sesion($solo_docentes = false) {
     if (!isset($_SESSION['id_usuario'])) {
