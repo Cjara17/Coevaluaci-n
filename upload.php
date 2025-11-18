@@ -20,10 +20,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['lista_estudiantes']))
         header("Location: dashboard_docente.php?status=" . urlencode("Error al subir archivo (Código: " . $_FILES['lista_estudiantes']['error'] . ")"));
         exit();
     }
-    
+
     $extension = strtolower(pathinfo($nombreArchivo, PATHINFO_EXTENSION));
     if ($extension != 'csv') {
         header("Location: dashboard_docente.php?status=" . urlencode("Error: El archivo debe ser un CSV."));
+        exit();
+    }
+
+    // Validación adicional de MIME type usando finfo_file
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($finfo, $archivo);
+    finfo_close($finfo);
+    $allowed_mime_types = ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'];
+    if (!in_array($mime_type, $allowed_mime_types)) {
+        header("Location: dashboard_docente.php?status=" . urlencode("Error: El archivo no es un CSV válido."));
         exit();
     }
 

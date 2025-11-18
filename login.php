@@ -30,7 +30,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
     
-    // Crear la sesión del usuario
+    // Crear la sesión del usuario con regeneración de ID para seguridad
+    session_regenerate_id(true);
     $_SESSION['id_usuario'] = $usuario['id'];
     $_SESSION['nombre'] = $usuario['nombre'];
     $_SESSION['id_equipo'] = $usuario['id_equipo'];

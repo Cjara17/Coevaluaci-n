@@ -174,6 +174,27 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
             <div class="alert alert-danger"><?php echo $invite_error; ?></div>
         <?php endif; ?>
 
+        <?php
+        // Mostrar alertas de actualizaciones si existe el archivo update_alerts.log
+        $alerts_file = __DIR__ . '/tools/update_alerts.log';
+        if (file_exists($alerts_file)) {
+            $alerts = file($alerts_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            if (!empty($alerts)) {
+                echo '<div class="alert alert-warning alert-dismissible fade show" role="alert" style="border-left: 4px solid #ffc107; background-color: #fff3cd; color: #856404;">';
+                echo '<strong>⚠️ Alertas de Actualizaciones:</strong><br>';
+                echo '<ul class="mb-0">';
+                foreach ($alerts as $alert) {
+                    // Remover timestamp para mostrar solo el mensaje
+                    $message = preg_replace('/^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] /', '', $alert);
+                    echo '<li>' . htmlspecialchars($message) . '</li>';
+                }
+                echo '</ul>';
+                echo '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                echo '</div>';
+            }
+        }
+        ?>
+
         <div class="modal fade" id="resetModal" tabindex="-1" aria-labelledby="resetModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">

@@ -15,16 +15,26 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_FILES['lista_estudiantes']
     exit();
 }
 
-$file = $_FILES['lista_estudiantes'];
-if ($file['error'] !== UPLOAD_ERR_OK) {
-    header("Location: dashboard_docente.php?error=" . urlencode("Error subiendo archivo (Código: " . $file['error'] . ")"));
-    exit();
-}
+    $file = $_FILES['lista_estudiantes'];
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        header("Location: dashboard_docente.php?error=" . urlencode("Error subiendo archivo (Código: " . $file['error'] . ")"));
+        exit();
+    }
 
-// Permitir CSV y XLSX
-$allowed_ext = ['csv', 'xlsx'];
-$ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-$tmp = $file['tmp_name'];
+    // Permitir CSV y XLSX
+    $allowed_ext = ['csv', 'xlsx'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $tmp = $file['tmp_name'];
+
+    // Validación adicional de MIME type usando finfo_file
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($finfo, $tmp);
+    finfo_close($finfo);
+    $allowed_mime_types = ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+    if (!in_array($mime_type, $allowed_mime_types)) {
+        header("Location: dashboard_docente.php?error=" . urlencode("Error: El archivo no es un CSV o XLSX válido."));
+        exit();
+    }
 
 $errors = [];
 $processed = 0;

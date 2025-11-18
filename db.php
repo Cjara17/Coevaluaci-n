@@ -1,4 +1,11 @@
 <?php
+// Cargar variables de entorno (solo si existe el archivo y composer está instalado)
+if (file_exists(__DIR__ . '/vendor/autoload.php') && file_exists(__DIR__ . '/.env')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+    $dotenv->load();
+}
+
 // En la parte superior, aseguramos el inicio de sesión
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
@@ -10,8 +17,8 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // ----------------------------
 
-// Configurable session timeout in seconds (15 minutes)
-$session_timeout = 900;
+// Configurable session timeout in seconds (15 minutes) desde .env
+$session_timeout = (int)($_ENV['SESSION_TIMEOUT'] ?? 900);
 
 // Check for session inactivity timeout
 if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $session_timeout)) {
@@ -25,11 +32,11 @@ if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 
 // Update last activity time to current timestamp
 $_SESSION['last_activity'] = time();
 
-// Configuración de la Base de Datos
-$servername = "localhost";
-$username = "root";
-$password = ""; 
-$dbname = "coeval_db";
+// Configuración de la Base de Datos desde .env
+$servername = $_ENV['DB_HOST'] ?? 'localhost';
+$username = $_ENV['DB_USER'] ?? 'root';
+$password = $_ENV['DB_PASS'] ?? '';
+$dbname = $_ENV['DB_NAME'] ?? 'coeval_db';
 
 // Crear conexión
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -47,6 +54,14 @@ if ($conn->connect_error) {
     // echo "<h1>✅ CONEXIÓN EXITOSA! ✅</h1>"; 
 }
 
+// Función para generar token CSRF
+function generar_csrf_token() {
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
 // Función para redirigir si el usuario no está logueado
 function verificar_sesion($solo_docentes = false) {
     if (!isset($_SESSION['id_usuario'])) {
@@ -57,5 +72,7 @@ function verificar_sesion($solo_docentes = false) {
         header("Location: index.php");
         exit();
     }
+    // Generar token CSRF si no existe
+    generar_csrf_token();
 }
 ?>

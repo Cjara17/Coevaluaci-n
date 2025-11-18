@@ -8,7 +8,13 @@ if (!isset($_SESSION['id_usuario'])) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    
+
+    // Verificar CSRF token
+    if (!isset($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        header("Location: index.php?error=" . urlencode("Token CSRF inválido."));
+        exit();
+    }
+
     $id_evaluador = $_SESSION['id_usuario'];
     $id_equipo_evaluado = (int)$_POST['id_equipo_evaluado'];
     
