@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<body class="silueta">
     <div class="container login-container">
         <div class="row justify-content-center w-100">
             <div class="col-md-8 col-lg-6">

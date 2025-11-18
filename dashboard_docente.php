@@ -125,7 +125,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="dashboard_docente.php">
-                <img src="logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
+                <img src="img/logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
                 Panel Docente
             </a>
             <div class="d-flex me-4">
@@ -222,7 +222,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
             <div class="col-md-6">
                 <div class="card shadow h-100">
                     <div class="card-header bg-success text-white">
-                        <h5 class="mb-0">⭐ Importar Estudiantes por ID (CSV/Excel)</h5>
+                        <h5 class="mb-0">Importar Estudiantes por ID (CSV/Excel)</h5>
                     </div>
                     <div class="card-body">
                         <p><strong>Formato requerido:</strong> ID, Nombre, Email</p>
@@ -232,7 +232,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                                 <label for="lista_estudiantes_id" class="form-label">Selecciona archivo CSV o Excel</label>
                                 <input class="form-control" type="file" id="lista_estudiantes_id" name="lista_estudiantes" accept=".csv,.xlsx" required>
                             </div>
-                            <button type="submit" class="btn btn-success w-100 fw-bold">📤 Importar Estudiantes</button>
+                            <button type="submit" class="btn btn-success w-100 fw-bold">Importar Estudiantes</button>
                         </form>
                         <hr>
                         <p class="text-muted small"><strong>Ejemplo (CSV):</strong></p>
@@ -243,7 +243,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="card shadow h-100">
+                <div class="card shadow">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">Gestión de Equipos (Método Antiguo)</h5>
                     </div>

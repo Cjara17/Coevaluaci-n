@@ -1,25 +1,29 @@
 body {
-    background-color: #f8f9fa;
-    height: 100vh; /* asegura que el body ocupe toda la altura de la pantalla */
-    margin: 0; /* elimina márgenes predeterminados */
+  background-color: #048fd4;
+  color: #333;
+  height: 100vh; /* asegura que el body ocupe toda la altura de la pantalla */
+  margin: 0; /* elimina márgenes predeterminados */
+}
+
+body.silueta {
+  background-image: url('img/fondoAraucarias.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 .login-container {
-    height: 100vh;
-    display: flex;
-    align-items: center;    /* centra verticalmente */
-    justify-content: center; /* centra horizontalmente */
+  height: 100vh;
+  display: flex;
+  align-items: center;    /* centra verticalmente */
+  justify-content: center; /* centra horizontalmente */
 }
 
 .login-card {
-    max-width: 700px; /* ancho más amplio */
-    width: 100%;
-    padding: 2rem; /* espacio interno */
-}
-
-body {
-  background: linear-gradient(135deg, #0077b6, #00b4d8);
-  color: #333;
+  max-width: 700px; /* ancho más amplio */
+  width: 100%;
+  padding: 2rem; /* espacio interno */
 }
 
 .card {
