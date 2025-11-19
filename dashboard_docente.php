@@ -166,6 +166,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 <a href="gestionar_conceptos.php" class="btn btn-outline-info">
                     Conceptos Cualitativos
                 </a>
+                <a href="dashboard_privado.php" class="btn btn-outline-warning">Vista privada</a>
             </div>
         </div>
 
