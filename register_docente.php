@@ -73,53 +73,61 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<body class="silueta">
-    <div class="container login-container">
-        <div class="row justify-content-center w-100">
-            <div class="col-md-8 col-lg-6">
-                <div class="card shadow login-card">
-                    <div class="card-body">
-                        <h3 class="card-title text-center mb-4">Registro de Docente</h3>
-                        <p class="text-center text-muted">Regístrate con tu correo institucional</p>
+<body>
+    <!-- NUEVO: Vista reestructurada para alinear logo y formulario como en index.php -->
+    <div class="register-wrapper" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background-image: url('img/fondoAraucarias.png'); background-size: cover; background-position: center; background-attachment: fixed; background-repeat: no-repeat;">
+        <!-- NUEVO: logo UCT movido a la esquina superior izquierda -->
+        <div style="position:absolute; top:20px; left:20px;">
+            <img src="img/logo_uct.png" style="height:80px;">
+        </div>
 
-                        <?php if (!empty($errors)): ?>
-                            <div class="alert alert-danger">
-                                <ul>
-                                    <?php foreach ($errors as $error): ?>
-                                        <li><?php echo htmlspecialchars($error); ?></li>
-                                    <?php endforeach; ?>
-                                </ul>
+        <div class="container" style="margin-top: 20px;">
+            <div class="row justify-content-center w-100">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card shadow login-card">
+                        <div class="card-body">
+                            <h3 class="card-title text-center mb-4">Registro de Docente</h3>
+                            <p class="text-center text-muted">Regístrate con tu correo institucional</p>
+
+                            <?php if (!empty($errors)): ?>
+                                <div class="alert alert-danger">
+                                    <ul>
+                                        <?php foreach ($errors as $error): ?>
+                                            <li><?php echo htmlspecialchars($error); ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            <?php endif; ?>
+
+                            <form action="register_docente.php" method="POST">
+                                <div class="mb-3">
+                                    <label for="nombre" class="form-label">Nombre Completo</label>
+                                    <input type="text" class="form-control" id="nombre" name="nombre" required placeholder="Tu nombre completo">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Correo Institucional</label>
+                                    <input type="email" class="form-control" id="email" name="email" required placeholder="usuario@uct.cl">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">Contraseña</label>
+                                    <input type="password" class="form-control" id="password" name="password" required minlength="6">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">Confirmar Contraseña</label>
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="6">
+                                </div>
+
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary">Registrarse</button>
+                                </div>
+                            </form>
+
+                            <div class="text-center mt-3">
+                                <a href="index.php">¿Ya tienes cuenta? Inicia sesión</a>
                             </div>
-                        <?php endif; ?>
-
-                        <form action="register_docente.php" method="POST">
-                            <div class="mb-3">
-                                <label for="nombre" class="form-label">Nombre Completo</label>
-                                <input type="text" class="form-control" id="nombre" name="nombre" required placeholder="Tu nombre completo">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="email" class="form-label">Correo Institucional</label>
-                                <input type="email" class="form-control" id="email" name="email" required placeholder="usuario@uct.cl">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="password" class="form-label">Contraseña</label>
-                                <input type="password" class="form-control" id="password" name="password" required minlength="6">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="confirm_password" class="form-label">Confirmar Contraseña</label>
-                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="6">
-                            </div>
-
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary">Registrarse</button>
-                            </div>
-                        </form>
-
-                        <div class="text-center mt-3">
-                            <a href="index.php">¿Ya tienes cuenta? Inicia sesión</a>
                         </div>
                     </div>
                 </div>

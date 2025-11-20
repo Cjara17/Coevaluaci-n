@@ -8,50 +8,48 @@
     <link rel="stylesheet" href="style.css">
 </head>
 
-<body class="silueta">
+<body>
 
-    <!-- NUEVO: Logo institucional UCT en login -->
-    <!-- NUEVO: ajuste de espaciado entre logo y login -->
-    <!-- NUEVO: ajuste de espaciado en login -->
-    <div class="d-flex align-items-center justify-content-center mt-1" style="margin-top: 10px;">
-        <img src="img/logo_uct.png" alt="Logo UCT" style="height: 70px;">
-    </div>
+    <!-- NUEVO: Se reestructuró la vista para eliminar espacio vertical entre logo y formulario -->
+    <div class="login-wrapper" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background-image: url('img/fondoAraucarias.png'); background-size: cover; background-position: center; background-attachment: fixed; background-repeat: no-repeat;">
+        <div class="text-center">
+            <img src="img/logo_uct.png" alt="Logo UCT" style="height: 80px;">
+        </div>
 
-    <div class="container login-container">
-        <div class="row justify-content-center w-100">
-            <div class="col-md-8 col-lg-6">
-                <div class="card shadow login-card">
-                    <div class="card-body">
-                        <h3 class="card-title text-center mb-4">Plataforma de Evaluación</h3>
-                        <p class="text-center text-muted">Inicia sesión con tu correo institucional</p>
-                        
-                        <?php if (isset($_GET['error'])): ?>
-                            <div class="alert alert-danger"><?php echo htmlspecialchars($_GET['error']); ?></div>
-                        <?php endif; ?>
+        <div class="container" style="margin-top: 20px;">
+            <div class="row justify-content-center w-100">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card shadow login-card">
+                        <div class="card-body">
+                            <h3 class="card-title text-center mb-4">Plataforma de Evaluación</h3>
+                            <p class="text-center text-muted">Inicia sesión con tu correo institucional</p>
+                            
+                            <?php if (isset($_GET['error'])): ?>
+                                <div class="alert alert-danger"><?php echo htmlspecialchars($_GET['error']); ?></div>
+                            <?php endif; ?>
 
-                        <form action="login.php" method="POST">
-                            <div class="mb-3">
-                                <label for="email" class="form-label">Correo Institucional</label>
-                                <input type="email" class="form-control" id="email" name="email" required placeholder="usuario@alu.uct.cl o usuario@uct.cl">
+                            <form action="login.php" method="POST">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Correo Institucional</label>
+                                    <input type="email" class="form-control" id="email" name="email" required placeholder="usuario@alu.uct.cl o usuario@uct.cl">
+                                </div>
+
+                                <div class="mb-3" id="password-field" style="display: none;">
+                                    <label for="password" class="form-label">Contraseña</label>
+                                    <input type="password" class="form-control" id="password" name="password">
+                                </div>
+
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary">Ingresar</button>
+                                </div>
+                            </form>
+
+                            <div class="text-center mt-3">
+                                <a href="register_docente.php" class="text-decoration-none">¿Eres docente? Regístrate aquí</a>
                             </div>
+                            <!-- NUEVO: se eliminó enlace Ir al Panel Docente por falta de utilidad -->
 
-                            <div class="mb-3" id="password-field" style="display: none;">
-                                <label for="password" class="form-label">Contraseña</label>
-                                <input type="password" class="form-control" id="password" name="password">
-                            </div>
-
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary">Ingresar</button>
-                            </div>
-                        </form>
-
-                        <div class="text-center mt-3">
-                            <a href="register_docente.php" class="text-decoration-none">¿Eres docente? Regístrate aquí</a>
                         </div>
-                        <div class="text-center mt-2">
-                            <a href="dashboard_docente.php" class="text-decoration-none">Ir al Panel Docente</a>
-                        </div>
-
                     </div>
                 </div>
             </div>
