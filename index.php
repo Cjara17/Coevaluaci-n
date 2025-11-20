@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Plataforma de Evaluación</title>
+    <title>Login - Plataforma de Coevaluación</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -21,7 +21,8 @@
                 <div class="col-md-8 col-lg-6">
                     <div class="card shadow login-card">
                         <div class="card-body">
-                            <h3 class="card-title text-center mb-4">Plataforma de Evaluación</h3>
+                            <h3 class="card-title text-center mb-4">Plataforma de Coevaluación</h3>
+                            <h4 class="card-subtitle text-center mb-4 text-muted">¡Evaluémonos!</h4>
                             <p class="text-center text-muted">Inicia sesión con tu correo institucional</p>
                             
                             <?php if (isset($_GET['error'])): ?>
@@ -48,6 +49,10 @@
                                 <a href="register_docente.php" class="text-decoration-none">¿Eres docente? Regístrate aquí</a>
                             </div>
                             <!-- NUEVO: se eliminó enlace Ir al Panel Docente por falta de utilidad -->
+
+                            <div class="text-center mt-3">
+                                <small class="text-muted">© 2025 Instituto Tecnológico TEC-UCT</small>
+                            </div>
 
                         </div>
                     </div>
