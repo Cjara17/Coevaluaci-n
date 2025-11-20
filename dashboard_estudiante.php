@@ -28,20 +28,17 @@ if ($equipo_presentando) {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Estudiante</title>
+    <title>Dashboard Estudiante - Coevaluación</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="#">Plataforma de Evaluación</a>
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><span class="navbar-text me-3">¡Hola, <?php echo htmlspecialchars($_SESSION['nombre']); ?>!</span></li>
-                <li class="nav-item"><a class="btn btn-light" href="logout.php">Cerrar Sesión</a></li>
-            </ul>
-        </div>
-    </nav>
+<body style="padding-bottom: 120px;">
+    <?php
+    // NUEVO: unificación visual con dashboard_docente
+    $page_title = 'Plataforma de Evaluación';
+    include 'header.php';
+    ?>
+
     <div class="container mt-5">
         
         <!-- Mensaje de éxito al volver de la evaluación -->
