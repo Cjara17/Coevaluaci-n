@@ -248,12 +248,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $conn->commit();
         
         // Redirección exitosa (Volver al dashboard del docente o a la página de éxito del estudiante)
-        if ($_SESSION['es_docente']) {
-            header("Location: dashboard_docente.php?status=" . urlencode("Evaluación registrada/actualizada con éxito."));
-        } else {
-            // Redirigir al estudiante a una página de éxito
-            header("Location: evaluacion_exitosa.php?msg=" . urlencode("Tu coevaluación se ha guardado con éxito."));
-        }
+        header("Location: evaluacion_exitosa.php?msg=" . urlencode("Tu coevaluación se ha guardado con éxito."));
         exit();
 
     } catch (Exception $e) {
