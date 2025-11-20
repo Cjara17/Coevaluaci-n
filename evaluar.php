@@ -56,7 +56,9 @@ $criterios = $stmt_criterios->get_result();
                 <tbody>
                     <?php while($criterio = $criterios->fetch_assoc()): ?>
                     <tr>
-                        <td><strong><?php echo htmlspecialchars($criterio['descripcion']); ?></strong></td>
+                        <td><strong><?php echo htmlspecialchars($criterio['descripcion']); ?></strong>
+                        <!-- NUEVO: descripción opcional del criterio -->
+                        <textarea name="descripciones[<?php echo $criterio['id']; ?>]" class="form-control mt-2" rows="2" placeholder="Descripción opcional del puntaje asignado a este criterio"></textarea></td>
                         <?php for ($i = 1; $i <= 5; $i++): ?>
                         <td class="text-center">
                             <!-- El nombre del input es un array que usa el ID del criterio como clave -->

@@ -102,6 +102,13 @@ if (count($conceptos) === 0) {
                                 </div>
                             <?php endforeach; ?>
                         </div>
+                        <!-- NUEVO: descripción opcional del criterio cualitativo -->
+                        <textarea
+                            name="descripciones[<?php echo $criterio['id']; ?>]"
+                            class="form-control mt-2"
+                            rows="2"
+                            placeholder="Descripción opcional del concepto asignado a este criterio">
+                        </textarea>
                     </div>
                 </div>
             <?php endwhile; ?>

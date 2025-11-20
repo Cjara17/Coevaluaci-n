@@ -16,9 +16,8 @@ START TRANSACTION;
 SET time_zone = "+00:00";
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-@OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-@OLD_COLLATION_CONNECTION=@@OLD_COLLATION_CONNECTION;
 /*!40101 SET NAMES utf8mb4 */;
 
 -- ========================================
@@ -66,7 +65,7 @@ CREATE TABLE `docente_curso` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================
--- TABLA: docente_curso_log (AUDITORÍA)
+-- TABLA: docente_curso_log
 -- ========================================
 CREATE TABLE `docente_curso_log` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
@@ -147,6 +146,10 @@ CREATE TABLE `evaluaciones_detalle` (
   `id_evaluacion` int(11) NOT NULL,
   `id_criterio` int(11) NOT NULL,
   `puntaje` int(11) NOT NULL,
+
+  -- ✔ Nuevo campo agregado para descripciones de evaluaciones numéricas
+  `numerical_details` TEXT NULL,
+
   PRIMARY KEY (`id`),
   KEY `id_evaluacion` (`id_evaluacion`),
   KEY `id_criterio` (`id_criterio`)
@@ -215,6 +218,10 @@ CREATE TABLE `evaluaciones_cualitativas_detalle` (
   `id_criterio` int(11) NOT NULL,
   `id_concepto` int(11) NOT NULL,
   `ponderacion_aplicada` decimal(5,2) DEFAULT NULL,
+
+  -- ✔ Nuevo campo para describir el concepto cualitativo elegido
+  `qualitative_details` TEXT NULL,
+
   PRIMARY KEY (`id`),
   KEY `idx_det_eval` (`id_evaluacion`),
   KEY `idx_det_criterio` (`id_criterio`),
@@ -241,96 +248,29 @@ CREATE TABLE `logs` (
       ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
 -- ========================================
 -- DATOS DE PRUEBA
 -- ========================================
 
--- Insertar usuario docente
-INSERT INTO `usuarios` (`nombre`, `email`, `student_id`, `es_docente`, `password`, `id_equipo`, `id_curso`) 
-VALUES ('Docente Prueba', 'docente@uct.cl', NULL, 1, '$2y$10$5RFvZl7w.zP5YL7KDH.cTu0Jq6kU4kDH8Qj4qK3L9Q2M6N7O8P9Q', NULL, NULL);
+INSERT INTO `usuarios` (`nombre`, `email`, `es_docente`, `password`)
+VALUES ('Docente Prueba', 'docente@uct.cl', 1, '$2y$10$5RFvZl7w.zP5YL7KDH.cTu0Jq6kU4kDH8Qj4qK3L9Q2M6N7O8P9Q');
 
--- Insertar cursos de prueba
 INSERT INTO `cursos` (`nombre_curso`, `semestre`, `anio`) 
-VALUES 
-('Programación I', '2025-1', 2025),
-('Algoritmos', '2025-1', 2025),
-('Base de Datos', '2025-2', 2025);
+VALUES ('Programación I', '2025-1', 2025);
 
--- Asociar docente a cursos
 INSERT INTO `docente_curso` (`id_docente`, `id_curso`, `ponderacion`) 
-VALUES 
-(1, 1, 1.00),
-(1, 2, 1.00),
-(1, 3, 1.00);
+VALUES (1, 1, 1.00);
 
--- Insertar equipos de prueba
 INSERT INTO `equipos` (`nombre_equipo`, `estado_presentacion`, `id_curso`) 
-VALUES 
-('Equipo A', 'pendiente', 1),
-('Equipo B', 'pendiente', 1),
-('Equipo C', 'pendiente', 1);
+VALUES ('Equipo A', 'pendiente', 1);
 
--- Insertar criterios de prueba
 INSERT INTO `criterios` (`descripcion`, `orden`, `activo`, `id_curso`) 
-VALUES 
-('Presentación', 1, 1, 1),
-('Contenido Técnico', 2, 1, 1),
-('Organización', 3, 1, 1),
-('Calidad del Código', 4, 1, 1),
-('Respuesta a Preguntas', 5, 1, 1);
+VALUES ('Presentación', 1, 1, 1);
 
--- Insertar estudiantes
-INSERT INTO `usuarios` (`nombre`, `email`, `student_id`, `es_docente`, `password`, `id_equipo`, `id_curso`) 
-VALUES 
-('Estudiante Prueba 1', 'estudiante@alu.uct.cl', NULL, 0, NULL, 1, 1),
-('Estudiante Prueba 2', 'estudiante2@alu.uct.cl', NULL, 0, NULL, 1, 1),
-('Estudiante Prueba 3', 'estudiante3@alu.uct.cl', NULL, 0, NULL, 2, 1),
-('Estudiante Prueba 4', 'estudiante4@alu.uct.cl', NULL, 0, NULL, 2, 1),
-('Estudiante Prueba 5', 'estudiante5@alu.uct.cl', NULL, 0, NULL, 3, 1);
-
--- Insertar evaluaciones maestro
-INSERT INTO `evaluaciones_maestro` (`id_evaluador`, `id_equipo_evaluado`, `puntaje_total`, `id_curso`) 
-VALUES 
-(2, 2, 85, 1),
-(3, 3, 90, 1),
-(4, 1, 78, 1);
-
--- Insertar detalles
-INSERT INTO `evaluaciones_detalle` (`id_evaluacion`, `id_criterio`, `puntaje`) 
-VALUES 
-(1, 1, 17),(1, 2, 18),(1, 3, 16),(1, 4, 17),(1, 5, 17),
-(2, 1, 18),(2, 2, 19),(2, 3, 18),(2, 4, 18),(2, 5, 17),
-(3, 1, 15),(3, 2, 16),(3, 3, 16),(3, 4, 15),(3, 5, 16);
-
--- Escalas cualitativas por defecto
-INSERT INTO `escalas_cualitativas` (`id_curso`, `nombre`, `descripcion`, `es_principal`, `creado_por`)
-VALUES
-(1, 'Escala cualitativa estándar', 'Escala base con cuatro descriptores', 1, 1);
-
--- Conceptos asociados a la escala anterior
-INSERT INTO `conceptos_cualitativos` (`id_escala`, `etiqueta`, `descripcion`, `color_hex`, `orden`, `activo`)
-VALUES
-(1, 'Excelente', 'Desempeño sobresaliente, supera expectativas.', '#198754', 1, 1),
-(1, 'Bueno', 'Cumple los criterios con solvencia.', '#0d6efd', 2, 1),
-(1, 'Regular', 'Cumple mínimamente, con oportunidades de mejora.', '#ffc107', 3, 1),
-(1, 'Necesita Mejorar', 'Requiere ajustes importantes.', '#dc3545', 4, 1);
-
--- Evaluación cualitativa de referencia
-INSERT INTO `evaluaciones_cualitativas` (`id_evaluador`, `id_equipo_evaluado`, `id_curso`, `id_escala`, `observaciones`)
-VALUES
-(1, 1, 1, 1, 'Retroalimentación de ejemplo para el equipo A.');
-
-INSERT INTO `evaluaciones_cualitativas_detalle` (`id_evaluacion`, `id_criterio`, `id_concepto`)
-VALUES
-(1, 1, 1),
-(1, 2, 2),
-(1, 3, 2),
-(1, 4, 3),
-(1, 5, 2);
 
 COMMIT;
 
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET */;
-@OLD_CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_SELF */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-@OLD_CHARACTER_SET_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

@@ -96,17 +96,22 @@ if ($num_evaluaciones > 0) {
         $evaluaciones_detalle[$id_evaluacion]['detalles'] = [];
 
         // Obtener los detalles de la evaluación específica
-        $stmt_detalle = $conn->prepare("SELECT id_criterio, puntaje FROM evaluaciones_detalle WHERE id_evaluacion = ?");
+        $stmt_detalle = $conn->prepare("SELECT id_criterio, puntaje, numerical_details FROM evaluaciones_detalle WHERE id_evaluacion = ?");
         $stmt_detalle->bind_param("i", $id_evaluacion);
         $stmt_detalle->execute();
         $detalles = $stmt_detalle->get_result();
-        
+
+        $evaluaciones_detalle[$id_evaluacion]['descripciones'] = [];
+
         while ($detalle = $detalles->fetch_assoc()) {
             $id_criterio = $detalle['id_criterio'];
             $puntaje = $detalle['puntaje'];
-            
+
             // Llenar el detalle para la tabla de evaluadores
             $evaluaciones_detalle[$id_evaluacion]['detalles'][$id_criterio] = $puntaje;
+
+            // NUEVO: descripción numérica por criterio
+            $evaluaciones_detalle[$id_evaluacion]['descripciones'][$id_criterio] = $detalle['numerical_details'];
 
             // Sumar para calcular promedio por criterio
             if (!isset($puntajes_totales_criterios[$id_criterio])) {

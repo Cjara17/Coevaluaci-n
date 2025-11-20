@@ -13,6 +13,15 @@ $id_escala = isset($_POST['id_escala']) ? (int)$_POST['id_escala'] : 0;
 $observaciones = isset($_POST['observaciones']) ? trim($_POST['observaciones']) : null;
 $conceptos_seleccionados = isset($_POST['conceptos']) && is_array($_POST['conceptos']) ? $_POST['conceptos'] : [];
 
+// NUEVO: Recopilar descripciones opcionales y sanitizarlas
+$descripciones = [];
+if (isset($_POST['descripciones']) && is_array($_POST['descripciones'])) {
+    foreach ($_POST['descripciones'] as $id_criterio => $desc) {
+        $id_criterio = (int)$id_criterio;
+        $descripciones[$id_criterio] = htmlspecialchars(trim($desc));
+    }
+}
+
 if ($id_equipo <= 0 || $id_escala <= 0 || empty($conceptos_seleccionados)) {
     header("Location: dashboard_docente.php?error=" . urlencode("Debes seleccionar opciones para todos los criterios."));
     exit();
@@ -97,13 +106,14 @@ try {
     }
 
     $stmt_detalle = $conn->prepare("
-        INSERT INTO evaluaciones_cualitativas_detalle (id_evaluacion, id_criterio, id_concepto)
-        VALUES (?, ?, ?)
+        INSERT INTO evaluaciones_cualitativas_detalle (id_evaluacion, id_criterio, id_concepto, qualitative_details)
+        VALUES (?, ?, ?, ?)
     ");
     foreach ($conceptos_seleccionados as $id_criterio => $id_concepto) {
         $id_criterio = (int)$id_criterio;
         $id_concepto = (int)$id_concepto;
-        $stmt_detalle->bind_param("iii", $id_evaluacion, $id_criterio, $id_concepto);
+        $detalle = isset($descripciones[$id_criterio]) ? htmlspecialchars(trim($descripciones[$id_criterio])) : null;
+        $stmt_detalle->bind_param("iiis", $id_evaluacion, $id_criterio, $id_concepto, $detalle);
         $stmt_detalle->execute();
     }
     $stmt_detalle->close();

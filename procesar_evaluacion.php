@@ -44,8 +44,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     
     $puntajes = [];
+    $descripciones = [];
     $puntaje_total = 0;
-    
+
     // Recopilar puntajes y calcular el total
     // Aceptar dos formatos:
     // a) evaluar.php actual: criterios[ID] = valor
@@ -67,6 +68,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $puntajes[$id_criterio] = $puntaje;
                 $puntaje_total += $puntaje;
             }
+        }
+    }
+
+    // NUEVO: Recopilar descripciones opcionales y sanitizarlas
+    if (isset($_POST['descripciones']) && is_array($_POST['descripciones'])) {
+        foreach ($_POST['descripciones'] as $id_criterio => $desc) {
+            $id_criterio = (int)$id_criterio;
+            $descripciones[$id_criterio] = htmlspecialchars(trim($desc));
         }
     }
     
