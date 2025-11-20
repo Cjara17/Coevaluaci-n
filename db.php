@@ -85,6 +85,36 @@ if (!function_exists('ensure_logs_table')) {
 
 ensure_logs_table($conn);
 
+if (!function_exists('ensure_criterios_extended_schema')) {
+    function ensure_criterios_extended_schema(mysqli $conn): void
+    {
+        $database = $conn->query("SELECT DATABASE() AS db")->fetch_assoc()['db'];
+
+        $columnExists = function(string $column) use ($conn, $database): bool {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS total
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'criterios' AND COLUMN_NAME = ?
+            ");
+            $stmt->bind_param("ss", $database, $column);
+            $stmt->execute();
+            $total = (int)$stmt->get_result()->fetch_assoc()['total'];
+            $stmt->close();
+            return $total > 0;
+        };
+
+        if (!$columnExists('puntaje_maximo')) {
+            $conn->query("ALTER TABLE criterios ADD COLUMN puntaje_maximo INT(11) NOT NULL DEFAULT 5 AFTER orden");
+        }
+
+        if (!$columnExists('ponderacion')) {
+            $conn->query("ALTER TABLE criterios ADD COLUMN ponderacion DECIMAL(6,2) NOT NULL DEFAULT 1.00 AFTER puntaje_maximo");
+        }
+    }
+}
+
+ensure_criterios_extended_schema($conn);
+
 // Función para generar token CSRF
 function generar_csrf_token() {
     if (!isset($_SESSION['csrf_token'])) {

@@ -71,12 +71,13 @@ $stmt_criterios->close();
 $sql_evaluaciones = "
     SELECT 
         em.id AS id_evaluacion, 
+        em.id_evaluador,
         em.puntaje_total, 
         u.nombre AS nombre_evaluador,
         em.fecha_evaluacion
     FROM evaluaciones_maestro em
     JOIN usuarios u ON em.id_evaluador = u.id
-    WHERE em.id_equipo_evaluado = ? AND em.id_curso = ? -- Filtro CLAVE
+    WHERE em.id_equipo_evaluado = ? AND em.id_curso = ?
     ORDER BY em.fecha_evaluacion DESC";
     
 $stmt_evaluaciones = $conn->prepare($sql_evaluaciones);
@@ -161,6 +162,7 @@ $nota_final = calcular_nota_final($promedio_general);
 // ----------------------------------------------------------------------
 $sql_eval_cual = "
     SELECT ec.id,
+           ec.id_evaluador,
            ec.fecha_evaluacion,
            ec.observaciones,
            u.nombre AS nombre_evaluador,
@@ -176,13 +178,14 @@ $stmt_eval_cual->execute();
 $result_eval_cual = $stmt_eval_cual->get_result();
 
 $evaluaciones_cualitativas = [];
+$qualitative_by_evaluator = [];
 while ($row = $result_eval_cual->fetch_assoc()) {
     $stmt_det_cual = $conn->prepare("
-        // NUEVO: descripción cualitativa en SELECT
         SELECT d.id_criterio,
                c.descripcion AS criterio,
                cc.etiqueta AS concepto,
-               cc.color_hex, d.qualitative_details
+               cc.color_hex,
+               d.qualitative_details
         FROM evaluaciones_cualitativas_detalle d
         JOIN criterios c ON d.id_criterio = c.id
         JOIN conceptos_cualitativos cc ON d.id_concepto = cc.id
@@ -196,6 +199,18 @@ while ($row = $result_eval_cual->fetch_assoc()) {
 
     $row['detalles'] = $detalles;
     $evaluaciones_cualitativas[] = $row;
+
+    $evalId = (int)$row['id_evaluador'];
+    if (!isset($qualitative_by_evaluator[$evalId])) {
+        $qualitative_by_evaluator[$evalId] = [
+            'observaciones' => $row['observaciones'],
+            'fecha' => $row['fecha_evaluacion'],
+            'detalles' => []
+        ];
+    }
+    foreach ($detalles as $detalle) {
+        $qualitative_by_evaluator[$evalId]['detalles'][(int)$detalle['id_criterio']] = $detalle;
+    }
 }
 $stmt_eval_cual->close();
 
@@ -304,27 +319,39 @@ $stmt_eval_cual->close();
                     </thead>
                     <tbody>
                         <?php foreach ($evaluaciones_detalle as $eval): ?>
+                        <?php $qual_match = isset($qualitative_by_evaluator[$eval['id_evaluador']]) ? $qualitative_by_evaluator[$eval['id_evaluador']] : null; ?>
                         <tr>
                             <td><?php echo htmlspecialchars($eval['nombre_evaluador']); ?></td>
                             <td class="text-center fw-bold"><?php echo $eval['puntaje_total']; ?></td>
                             <?php foreach ($criterios_map as $id_criterio => $descripcion): ?>
-                                <td class="text-center">
-                                    // NUEVO: collapse descripción numérica
+                                <td class="text-center align-top">
                                     <?php if (isset($eval['detalles'][$id_criterio])): ?>
                                         <div class="fw-bold"><?php echo $eval['detalles'][$id_criterio]; ?></div>
 
                                         <?php if (!empty($eval['descripciones'][$id_criterio])): ?>
-                                            <?php
-                                                $collapseId = 'numdesc-' . $eval['id_evaluacion'] . '-' . $id_criterio;
-                                            ?>
+                                            <?php $collapseId = 'numdesc-' . $eval['id_evaluacion'] . '-' . $id_criterio; ?>
                                             <small class="text-primary d-block" style="cursor:pointer;"
                                                    data-bs-toggle="collapse"
                                                    href="#<?php echo $collapseId; ?>">
                                                 Ver descripción
                                             </small>
 
-                                            <div class="collapse mt-1 small text-muted" id="<?php echo $collapseId; ?>">
+                                            <div class="collapse mt-1 small text-muted text-start" id="<?php echo $collapseId; ?>">
                                                 <?php echo nl2br(htmlspecialchars($eval['descripciones'][$id_criterio])); ?>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <?php if ($qual_match && isset($qual_match['detalles'][$id_criterio])): ?>
+                                            <?php $qualDetalle = $qual_match['detalles'][$id_criterio]; ?>
+                                            <div class="mt-2">
+                                                <span class="badge text-white" style="background-color: <?php echo htmlspecialchars($qualDetalle['color_hex']); ?>;">
+                                                    <?php echo htmlspecialchars($qualDetalle['concepto']); ?>
+                                                </span>
+                                                <?php if (!empty($qualDetalle['qualitative_details'])): ?>
+                                                    <small class="d-block text-muted mt-1">
+                                                        <?php echo nl2br(htmlspecialchars($qualDetalle['qualitative_details'])); ?>
+                                                    </small>
+                                                <?php endif; ?>
                                             </div>
                                         <?php endif; ?>
 
@@ -381,7 +408,6 @@ $stmt_eval_cual->close();
                                                         <span class="badge text-white" style="background-color: <?php echo htmlspecialchars($detalle['color_hex']); ?>;">
                                                             <?php echo htmlspecialchars($detalle['concepto']); ?>
                                                         </span>
-                                                        // NUEVO: mostrar descripción cualitativa
                                                         <?php if (!empty($detalle['qualitative_details'])): ?>
                                                             <div class="text-muted small mt-1">
                                                                 <strong>Detalle:</strong>

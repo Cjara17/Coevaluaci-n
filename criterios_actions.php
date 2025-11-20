@@ -32,20 +32,48 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
         case 'add':
             $descripcion = trim($_POST['descripcion']);
             $orden = (int)$_POST['orden'];
+            $puntaje_maximo = isset($_POST['puntaje_maximo']) ? max(1, (int)$_POST['puntaje_maximo']) : 5;
+            $ponderacion = isset($_POST['ponderacion']) ? max(0, (float)$_POST['ponderacion']) : 1.0;
 
             if (empty($descripcion)) {
                 redirect("", "La descripción no puede estar vacía.");
             }
 
             // Inserción, incluyendo el id_curso_activo
-            $stmt = $conn->prepare("INSERT INTO criterios (descripcion, orden, id_curso) VALUES (?, ?, ?)");
-            $stmt->bind_param("sii", $descripcion, $orden, $id_curso_activo);
+            $stmt = $conn->prepare("INSERT INTO criterios (descripcion, orden, puntaje_maximo, ponderacion, id_curso) VALUES (?, ?, ?, ?, ?)");
+            $stmt->bind_param("siidi", $descripcion, $orden, $puntaje_maximo, $ponderacion, $id_curso_activo);
 
             if ($stmt->execute()) {
                 redirect("Criterio '$descripcion' añadido al curso.");
             } else {
                 $error_message = "Error al añadir el criterio: " . $stmt->error;
                 redirect("", $error_message);
+            }
+            $stmt->close();
+            break;
+
+        case 'update':
+            $id_criterio = (int)$_POST['id_criterio'];
+            $descripcion = trim($_POST['descripcion']);
+            $orden = isset($_POST['orden']) ? (int)$_POST['orden'] : 0;
+            $puntaje_maximo = isset($_POST['puntaje_maximo']) ? max(1, (int)$_POST['puntaje_maximo']) : 5;
+            $ponderacion = isset($_POST['ponderacion']) ? max(0, (float)$_POST['ponderacion']) : 1.0;
+
+            if ($id_criterio <= 0) {
+                redirect("", "Criterio inválido.");
+            }
+
+            if ($descripcion === '') {
+                redirect("", "La descripción no puede estar vacía.");
+            }
+
+            $stmt = $conn->prepare("UPDATE criterios SET descripcion = ?, orden = ?, puntaje_maximo = ?, ponderacion = ? WHERE id = ? AND id_curso = ?");
+            $stmt->bind_param("siidii", $descripcion, $orden, $puntaje_maximo, $ponderacion, $id_criterio, $id_curso_activo);
+
+            if ($stmt->execute()) {
+                redirect("Criterio actualizado correctamente.");
+            } else {
+                redirect("", "Error al actualizar criterio: " . $stmt->error);
             }
             $stmt->close();
             break;

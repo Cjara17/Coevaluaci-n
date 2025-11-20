@@ -1,6 +1,6 @@
 <?php
 require 'db.php';
-verificar_sesion(true); // Solo docentes pueden acceder a este flujo
+verificar_sesion(); // Permitir a cualquier evaluador autenticado acceder
 
 if (!isset($_GET['id_equipo']) || !is_numeric($_GET['id_equipo'])) {
     header("Location: dashboard_docente.php?error=" . urlencode("Equipo no especificado."));
@@ -41,7 +41,7 @@ $stmt_criterios->execute();
 $criterios = $stmt_criterios->get_result();
 
 if ($criterios->num_rows === 0) {
-    header("Location: gestionar_criterios.php?error=" . urlencode("Aún no hay criterios activos en este curso."));
+    header("Location: gestionar_conceptos.php?error=" . urlencode("Aún no hay criterios activos en este curso."));
     exit();
 }
 
@@ -70,6 +70,22 @@ if (count($conceptos) === 0) {
                 <small class="text-muted">Escala: <?php echo htmlspecialchars($escala['nombre']); ?></small>
             </div>
             <a href="dashboard_docente.php" class="btn btn-outline-secondary">← Volver</a>
+        </div>
+
+        <div class="alert alert-secondary">
+            <h5 class="mb-3">Conceptos disponibles</h5>
+            <div class="row g-3">
+                <?php foreach ($conceptos as $concepto): ?>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="p-3 h-100 border rounded" style="border-left: .5rem solid <?php echo htmlspecialchars($concepto['color_hex']); ?>;">
+                            <strong><?php echo htmlspecialchars($concepto['etiqueta']); ?></strong>
+                            <small class="d-block text-muted mt-2">
+                                <?php echo htmlspecialchars($concepto['descripcion'] ?? ''); ?>
+                            </small>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
         </div>
 
         <form action="procesar_evaluacion_cualitativa.php" method="POST" class="needs-validation" novalidate>
