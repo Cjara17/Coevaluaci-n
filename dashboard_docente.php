@@ -1,5 +1,6 @@
 <?php
 require 'db.php';
+require_once __DIR__ . '/invite_helpers.php';
 // Requerir ser docente Y tener un curso activo
 verificar_sesion(true);
 
@@ -94,6 +95,24 @@ $stmt_equipos->execute();
 $equipos = $stmt_equipos->get_result();
 
 $qualitative_feed = get_course_qualitative_feed($conn, $id_curso_activo, 6);
+
+// Invitados creados (usuarios sin curso ni equipo)
+$invitados_registrados = [];
+$sql_invitados = "
+    SELECT id, nombre, email
+    FROM usuarios
+    WHERE es_docente = 0
+      AND id_equipo IS NULL
+      AND id_curso IS NULL
+    ORDER BY id DESC
+";
+if ($resultado_invitados = $conn->query($sql_invitados)) {
+    while ($fila = $resultado_invitados->fetch_assoc()) {
+        $invitados_registrados[] = $fila;
+    }
+    $resultado_invitados->free();
+}
+$credenciales_invitados = load_invite_credentials();
 
 // 4. FUNCIÓN PARA CALCULAR LA NOTA FINAL PONDERADA Y LA NOTA EN ESCALA 1-7
 // Escala Chilena (asumiendo puntaje max. 100)
@@ -445,7 +464,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
 
     <!-- Modal: Crear nuevo evaluador -->
     <div class="modal fade" id="inviteModal" tabindex="-1" aria-labelledby="inviteModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="inviteModalLabel">Crear nuevo evaluador</h5>
@@ -453,13 +472,9 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 </div>
                 <form action="create_evaluator.php" method="POST">
                     <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="tipo_evaluador" class="form-label">Rol del evaluador</label>
-                            <select class="form-select" id="tipo_evaluador" name="tipo_evaluador" required>
-                                <option value="invitado">Invitado</option>
-                                <option value="estudiante">Estudiante</option>
-                                <option value="docente">Docente</option>
-                            </select>
+                        <input type="hidden" name="tipo_evaluador" value="invitado">
+                        <div class="alert alert-info py-2">
+                            <strong>Rol invitado activo.</strong> Se generará un acceso temporal para el correo indicado.
                         </div>
                         <div class="mb-3">
                             <label for="email_evaluador" class="form-label">Correo electrónico</label>
@@ -479,6 +494,69 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                         <button type="submit" class="btn btn-primary">Crear</button>
                     </div>
                 </form>
+                <div class="modal-body border-top">
+                    <h6 class="mb-3">Invitados creados</h6>
+                    <?php if (count($invitados_registrados) === 0): ?>
+                        <div class="alert alert-light border">Aún no hay invitados registrados.</div>
+                    <?php else: ?>
+                        <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
+                            <table class="table table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 45%;">Usuario</th>
+                                        <th style="width: 40%;">Contraseña</th>
+                                        <th class="text-center" style="width: 15%;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($invitados_registrados as $invitado): ?>
+                                    <?php $form_id = 'invite-update-' . $invitado['id']; ?>
+                                    <tr>
+                                        <?php
+                                            $credencial = $credenciales_invitados[$invitado['id']] ?? [];
+                                            $password_visible = $credencial['password'] ?? '';
+                                        ?>
+                                        <td>
+                                            <strong><?php echo htmlspecialchars($invitado['email']); ?></strong>
+                                            <input type="hidden"
+                                                   name="nombre"
+                                                   form="<?php echo $form_id; ?>"
+                                                   value="<?php echo htmlspecialchars($invitado['nombre']); ?>">
+                                            <input type="hidden"
+                                                   name="username"
+                                                   form="<?php echo $form_id; ?>"
+                                                   value="<?php echo htmlspecialchars($invitado['email']); ?>">
+                                        </td>
+                                        <td>
+                                            <input type="text"
+                                                   name="password"
+                                                   form="<?php echo $form_id; ?>"
+                                                   class="form-control form-control-sm"
+                                                   value="<?php echo htmlspecialchars($password_visible); ?>"
+                                                   placeholder="Contraseña"
+                                                   minlength="6">
+                                        </td>
+                                        <td class="text-center">
+                                            <form id="<?php echo $form_id; ?>" action="invite_actions.php" method="POST" class="d-inline invite-action-form" data-action="update" target="inviteActionsFrame">
+                                                <input type="hidden" name="action" value="update_invite">
+                                                <input type="hidden" name="id_usuario" value="<?php echo (int)$invitado['id']; ?>">
+                                            </form>
+                                            <button type="submit" form="<?php echo $form_id; ?>" class="btn btn-sm btn-outline-primary mb-2">Actualizar</button>
+                                            
+                                            <form action="invite_actions.php" method="POST" class="d-inline invite-action-form" data-action="delete" target="inviteActionsFrame">
+                                                <input type="hidden" name="action" value="delete_invite">
+                                                <input type="hidden" name="id_usuario" value="<?php echo (int)$invitado['id']; ?>">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <iframe name="inviteActionsFrame" style="display:none;"></iframe>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -706,6 +784,22 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                     } else {
                         span.textContent = oculto;
                         btn.textContent = 'Mostrar';
+                    }
+                });
+            });
+
+            // Confirmaciones para formularios de invitados
+            document.querySelectorAll('.invite-action-form').forEach(function(form) {
+                form.addEventListener('submit', function (event) {
+                    const tipo = form.dataset.action;
+                    let mensaje = '';
+                    if (tipo === 'update') {
+                        mensaje = '¿Confirmas actualizar las credenciales de este invitado?';
+                    } else if (tipo === 'delete') {
+                        mensaje = '¿Confirmas eliminar este invitado? Esta acción no se puede deshacer.';
+                    }
+                    if (mensaje && !confirm(mensaje)) {
+                        event.preventDefault();
                     }
                 });
             });

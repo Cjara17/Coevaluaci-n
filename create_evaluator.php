@@ -1,5 +1,6 @@
 <?php
 require 'db.php';
+require_once __DIR__ . '/invite_helpers.php';
 verificar_sesion(true);
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
@@ -7,7 +8,10 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit();
 }
 
-$tipo = isset($_POST['tipo_evaluador']) ? strtolower(trim($_POST['tipo_evaluador'])) : '';
+$tipo = isset($_POST['tipo_evaluador']) ? strtolower(trim($_POST['tipo_evaluador'])) : 'invitado';
+if ($tipo === '') {
+    $tipo = 'invitado';
+}
 $email = isset($_POST['email']) ? trim($_POST['email']) : '';
 $password = isset($_POST['password']) ? trim($_POST['password']) : '';
 
@@ -27,9 +31,41 @@ if (strlen($password) < 6) {
     exit();
 }
 
-// Verificar si ya existe un usuario con ese correo
+$email_login = $email;
+$usuario_generado = null;
+
+if ($tipo === 'invitado') {
+    $prefijo_username = strtolower(strtok($email, '@'));
+    $prefijo_username = preg_replace('/[^a-z0-9]/', '', $prefijo_username ?? '');
+    if ($prefijo_username === '') {
+        $prefijo_username = 'usuario';
+    }
+
+    $prefijo_username = rtrim($prefijo_username, '.') . '.';
+
+    $caracteres_username = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    $longitud_cadena = strlen($caracteres_username);
+    do {
+        $sufijo = '';
+        for ($i = 0; $i < 5; $i++) {
+            $sufijo .= $caracteres_username[random_int(0, $longitud_cadena - 1)];
+        }
+        $usuario_generado = $prefijo_username . $sufijo;
+
+        $stmt_check_username = $conn->prepare("SELECT id FROM usuarios WHERE email = ?");
+        $stmt_check_username->bind_param("s", $usuario_generado);
+        $stmt_check_username->execute();
+        $resultado_username = $stmt_check_username->get_result();
+        $existe_username = $resultado_username->num_rows > 0;
+        $stmt_check_username->close();
+    } while ($existe_username);
+
+    $email_login = $usuario_generado;
+}
+
+// Verificar si ya existe un usuario con el identificador que se guardará
 $stmt_check = $conn->prepare("SELECT id FROM usuarios WHERE email = ?");
-$stmt_check->bind_param("s", $email);
+$stmt_check->bind_param("s", $email_login);
 $stmt_check->execute();
 $resultado_check = $stmt_check->get_result();
 if ($resultado_check->num_rows > 0) {
@@ -42,24 +78,29 @@ $stmt_check->close();
 $es_docente = ($tipo === 'docente') ? 1 : 0;
 
 // Generar un nombre básico a partir del correo si no se solicita explícitamente.
-$prefijo_correo = strtok($email, '@');
-$prefijo_correo = preg_replace('/[^A-Za-z0-9]/', '', $prefijo_correo);
-if ($prefijo_correo === '') {
-    $prefijo_correo = 'Usuario';
+$prefijo_display = strtok($email, '@');
+$prefijo_display = preg_replace('/[^A-Za-z0-9]/', '', $prefijo_display);
+if ($prefijo_display === '') {
+    $prefijo_display = 'Usuario';
 }
-$nombre_generado = ucfirst($tipo) . ' ' . $prefijo_correo;
+$nombre_generado = $prefijo_display;
 
 $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
 $stmt_insert = $conn->prepare("INSERT INTO usuarios (nombre, email, es_docente, password, id_equipo, id_curso) VALUES (?, ?, ?, ?, NULL, NULL)");
-$stmt_insert->bind_param("ssis", $nombre_generado, $email, $es_docente, $password_hash);
+$stmt_insert->bind_param("ssis", $nombre_generado, $email_login, $es_docente, $password_hash);
 
 if (!$stmt_insert->execute()) {
     $stmt_insert->close();
     header("Location: dashboard_docente.php?invite_error=" . urlencode("No se pudo crear el perfil. Intenta nuevamente."));
     exit();
 }
+$nuevo_id_usuario = $stmt_insert->insert_id;
 $stmt_insert->close();
+
+if ($tipo === 'invitado') {
+    upsert_invite_credential($nuevo_id_usuario, $email_login, $password);
+}
 
 // Enviar correo con credenciales usando PHPMailer
 require_once __DIR__ . '/vendor/autoload.php';
@@ -87,9 +128,10 @@ try {
     // Contenido
     $mail->isHTML(false);
     $mail->Subject = 'Credenciales de acceso - Plataforma de Evaluación';
+    $credencial_login = ($tipo === 'invitado') ? "Usuario: " . $email_login : "Correo: " . $email_login;
     $mail->Body = "Hola,\n\nSe ha creado un perfil en la Plataforma de Evaluación con los siguientes datos:\n\n" .
                   "Rol: " . ucfirst($tipo) . "\n" .
-                  "Correo: " . $email . "\n" .
+                  $credencial_login . "\n" .
                   "Contraseña: " . $password . "\n\n" .
                   "Puedes acceder desde: " . (isset($_SERVER['HTTP_HOST']) ? "http://{$_SERVER['HTTP_HOST']}/Coevaluaci-n/index.php" : "http://localhost/Coevaluaci-n/index.php") . "\n\n" .
                   "Por favor, cambia la contraseña después de iniciar sesión.\n\n" .

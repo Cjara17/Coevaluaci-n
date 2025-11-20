@@ -82,8 +82,8 @@ $mensaje_exito = isset($_GET['success']) ? $_GET['success'] : '';
         
         <!-- Email -->
         <div class="mb-3">
-          <label for="email" class="form-label">Correo institucional</label>
-          <input type="email" class="form-control" id="email" name="email" placeholder="nombre@alu.uct.cl o usuario@uct.cl" required>
+          <label for="email" class="form-label">Correo institucional o usuario</label>
+          <input type="text" class="form-control" id="email" name="email" placeholder="nombre@alu.uct.cl o nicolashuenchullancheuquelaf.voum9" required>
         </div>
 
         <!-- Contraseña (solo para docentes) -->
