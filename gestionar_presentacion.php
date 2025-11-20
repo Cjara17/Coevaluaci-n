@@ -1,4 +1,6 @@
 <?php
+// NUEVO: se agregó header global institucional UCT
+include 'header.php';
 require 'db.php';
 // Requerir ser docente Y tener un curso activo
 verificar_sesion(true);

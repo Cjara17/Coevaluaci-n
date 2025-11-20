@@ -124,26 +124,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
     <link rel="stylesheet" href="style.css">
 </head>
 <body style="padding-bottom: 120px;">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard_docente.php">
-                <img src="img/logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
-                Panel Docente
-            </a>
-            <div class="d-flex me-4">
-                <form action="set_course.php" method="POST" class="d-flex">
-                    <select name="id_curso" class="form-select form-select-sm me-2" onchange="this.form.submit()">
-                        <?php while($c = $all_cursos->fetch_assoc()): ?>
-                            <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $id_curso_activo) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($c['nombre_curso'] . ' ' . $c['semestre'] . '-' . $c['anio']); ?>
-                            </option>
-                        <?php endwhile; ?>
-                    </select>
-                </form>
-                <a href="logout.php" class="btn btn-outline-danger btn-sm">Cerrar Sesión</a>
-            </div>
-        </div>
-    </nav>
+    <?php include 'header.php'; ?>
 
     <div class="container mt-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -151,7 +132,8 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 Curso Activo: <?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' ' . $curso_activo['semestre'] . '-' . $curso_activo['anio']); ?>
             </h1>
             <div class="d-flex gap-2 flex-wrap justify-content-end">
-                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#inviteModal">
+                <!-- // NUEVO: unificación de estilo sin cambiar colores -->
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inviteModal">
                     Agregar invitado
                 </button>
                 <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#resetModal">
@@ -163,10 +145,10 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 <a href="gestionar_criterios.php" class="btn btn-info">
                     Gestionar Criterios
                 </a>
-                <a href="gestionar_conceptos.php" class="btn btn-outline-info">
+                <a href="gestionar_conceptos.php" class="btn btn-secondary">
                     Conceptos Cualitativos
                 </a>
-                <a href="dashboard_privado.php" class="btn btn-outline-warning">Vista privada</a>
+                <a href="dashboard_privado.php" class="btn btn-dark">Vista privada</a>
             </div>
         </div>
 

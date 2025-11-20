@@ -1,4 +1,6 @@
 <?php
+// NUEVO: se agregó header global institucional UCT
+include 'header.php';
 require 'db.php';
 // Requerir ser docente Y tener un curso activo
 verificar_sesion(true);
@@ -47,25 +49,6 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard_docente.php">
-                <img src="img/logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
-                Panel Docente
-            </a>
-            <div class="d-flex me-4">
-                <form action="set_course.php" method="POST" class="d-flex">
-                    <select name="id_curso" class="form-select form-select-sm me-2" disabled>
-                        <option>
-                            <?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' ' . $curso_activo['semestre'] . '-' . $curso_activo['anio']); ?>
-                        </option>
-                    </select>
-                </form>
-                <a href="logout.php" class="btn btn-outline-danger btn-sm">Cerrar Sesión</a>
-            </div>
-        </div>
-    </nav>
-
     <div class="container mt-5">
         <h1>Gestionar Criterios</h1>
         <p class="lead">Curso Activo: <strong><?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' ' . $curso_activo['semestre']); ?></strong></p>

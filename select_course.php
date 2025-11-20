@@ -52,17 +52,10 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : (iss
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard_docente.php">
-                <img src="img/logo_uct.png" alt="TEC-UCT Logo" style="height: 30px;">
-                Panel Docente
-            </a>
-            <div class="d-flex me-4">
-                <a href="logout.php" class="btn btn-outline-danger btn-sm">Cerrar Sesión</a>
-            </div>
-        </div>
-    </nav>
+    <?php
+    // NUEVO: header global institucional UCT
+    $page_title = "Panel Docente"; include 'header.php';
+    ?>
 
     <div class="container mt-5">
         <h1 class="mb-4">Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre']); ?></h1>

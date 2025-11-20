@@ -1,4 +1,6 @@
 <?php
+// NUEVO: se agregó header global institucional UCT
+include 'header.php';
 require 'db.php';
 verificar_sesion(true);
 
@@ -31,20 +33,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard_docente.php">
-                <img src="logo_uct.png" alt="Logo" style="height: 30px;">
-                Panel Docente
-            </a>
-            <div class="d-flex me-4">
-                <span class="navbar-text text-white me-3">
-                    Curso: <?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' ' . $curso_activo['semestre'] . '-' . $curso_activo['anio']); ?>
-                </span>
-                <a href="logout.php" class="btn btn-outline-danger btn-sm">Cerrar Sesión</a>
-            </div>
-        </div>
-    </nav>
+    <!-- NUEVO: se eliminó navbar antiguo tras implementación de header institucional UCT -->
 
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">

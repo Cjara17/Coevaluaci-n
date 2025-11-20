@@ -1,5 +1,7 @@
 <?php
 session_start();
+// NUEVO: se agregó header global institucional UCT
+// include 'header.php';
 require 'db.php';
 
 // Procesar el formulario POST
@@ -67,6 +69,11 @@ $mensaje_exito = isset($_GET['success']) ? $_GET['success'] : '';
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-light">
+
+// NUEVO: logo institucional en login sin header
+<div class="d-flex align-items-center justify-content-center mt-4">
+    <img src="img/logo_uct.png" alt="Logo UCT" style="height: 70px;">
+</div>
 
   <div class="container d-flex justify-content-center align-items-center vh-100">
     <div class="card shadow-lg p-4" style="width: 380px;">

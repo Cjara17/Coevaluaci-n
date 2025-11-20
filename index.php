@@ -7,8 +7,16 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+
 <body class="silueta">
+
+    <!-- NUEVO: Logo institucional UCT en login -->
+    <!-- NUEVO: ajuste de espaciado entre logo y login -->
+    <!-- NUEVO: ajuste de espaciado en login -->
+    <div class="d-flex align-items-center justify-content-center mt-1" style="margin-top: 10px;">
+        <img src="img/logo_uct.png" alt="Logo UCT" style="height: 70px;">
+    </div>
+
     <div class="container login-container">
         <div class="row justify-content-center w-100">
             <div class="col-md-8 col-lg-6">
@@ -40,9 +48,10 @@
                         <div class="text-center mt-3">
                             <a href="register_docente.php" class="text-decoration-none">¿Eres docente? Regístrate aquí</a>
                         </div>
-                                                <div class="text-center mt-2">
-                                                    <a href="dashboard_docente.php" class="text-decoration-none">Ir al Panel Docente</a>
-                                                </div>
+                        <div class="text-center mt-2">
+                            <a href="dashboard_docente.php" class="text-decoration-none">Ir al Panel Docente</a>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -54,8 +63,6 @@
             const email = this.value;
             const passwordField = document.getElementById('password-field');
             
-            // Lógica para detectar si es un correo de estudiante o no.
-            // Si el correo NO termina en '@alu.uct.cl', asumimos que es un docente y pedimos contraseña.
             if (email.length > 0 && !email.endsWith('@alu.uct.cl')) {
                 passwordField.style.display = 'block';
                 document.getElementById('password').required = true;
