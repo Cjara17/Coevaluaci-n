@@ -178,10 +178,11 @@ $result_eval_cual = $stmt_eval_cual->get_result();
 $evaluaciones_cualitativas = [];
 while ($row = $result_eval_cual->fetch_assoc()) {
     $stmt_det_cual = $conn->prepare("
+        // NUEVO: descripción cualitativa en SELECT
         SELECT d.id_criterio,
                c.descripcion AS criterio,
                cc.etiqueta AS concepto,
-               cc.color_hex
+               cc.color_hex, d.qualitative_details
         FROM evaluaciones_cualitativas_detalle d
         JOIN criterios c ON d.id_criterio = c.id
         JOIN conceptos_cualitativos cc ON d.id_concepto = cc.id
@@ -308,7 +309,28 @@ $stmt_eval_cual->close();
                             <td class="text-center fw-bold"><?php echo $eval['puntaje_total']; ?></td>
                             <?php foreach ($criterios_map as $id_criterio => $descripcion): ?>
                                 <td class="text-center">
-                                    <?php echo isset($eval['detalles'][$id_criterio]) ? $eval['detalles'][$id_criterio] : 'N/A'; ?>
+                                    // NUEVO: collapse descripción numérica
+                                    <?php if (isset($eval['detalles'][$id_criterio])): ?>
+                                        <div class="fw-bold"><?php echo $eval['detalles'][$id_criterio]; ?></div>
+
+                                        <?php if (!empty($eval['descripciones'][$id_criterio])): ?>
+                                            <?php
+                                                $collapseId = 'numdesc-' . $eval['id_evaluacion'] . '-' . $id_criterio;
+                                            ?>
+                                            <small class="text-primary d-block" style="cursor:pointer;"
+                                                   data-bs-toggle="collapse"
+                                                   href="#<?php echo $collapseId; ?>">
+                                                Ver descripción
+                                            </small>
+
+                                            <div class="collapse mt-1 small text-muted" id="<?php echo $collapseId; ?>">
+                                                <?php echo nl2br(htmlspecialchars($eval['descripciones'][$id_criterio])); ?>
+                                            </div>
+                                        <?php endif; ?>
+
+                                    <?php else: ?>
+                                        N/A
+                                    <?php endif; ?>
                                 </td>
                             <?php endforeach; ?>
                             <td><?php echo date("Y-m-d H:i", strtotime($eval['fecha_evaluacion'])); ?></td>
@@ -359,6 +381,13 @@ $stmt_eval_cual->close();
                                                         <span class="badge text-white" style="background-color: <?php echo htmlspecialchars($detalle['color_hex']); ?>;">
                                                             <?php echo htmlspecialchars($detalle['concepto']); ?>
                                                         </span>
+                                                        // NUEVO: mostrar descripción cualitativa
+                                                        <?php if (!empty($detalle['qualitative_details'])): ?>
+                                                            <div class="text-muted small mt-1">
+                                                                <strong>Detalle:</strong>
+                                                                <?php echo htmlspecialchars($detalle['qualitative_details']); ?>
+                                                            </div>
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -374,5 +403,14 @@ $stmt_eval_cual->close();
             <div class="alert alert-secondary">No hay evaluaciones cualitativas registradas todavía.</div>
         <?php endif; ?>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Inicializar tooltips de Bootstrap
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    </script>
 </body>
 </html>
