@@ -41,7 +41,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                 <h1 class="mb-0">Conceptos cualitativos</h1>
                 <p class="text-muted mb-0">Define los descriptores para las evaluaciones cualitativas.</p>
             </div>
-            <a href="gestionar_criterios.php" class="btn btn-secondary">← Volver a criterios</a>
+            <a href="dashboard_docente.php" class="btn btn-secondary">← Volver al curso activo</a>
         </div>
 
         <?php if ($status_message): ?>
@@ -54,27 +54,6 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
         <div class="row g-4">
             <div class="col-lg-5">
                 <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <strong>Escala activa</strong>
-                    </div>
-                    <div class="card-body">
-                        <form action="conceptos_actions.php" method="POST">
-                            <input type="hidden" name="action" value="update_scale">
-                            <input type="hidden" name="id_escala" value="<?php echo (int)$escala['id']; ?>">
-                            <div class="mb-3">
-                                <label class="form-label">Nombre de la escala</label>
-                                <input type="text" name="nombre" class="form-control" required value="<?php echo htmlspecialchars($escala['nombre']); ?>">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Descripción / instrucciones</label>
-                                <textarea name="descripcion" rows="4" class="form-control"><?php echo htmlspecialchars((string)$escala['descripcion']); ?></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">Guardar escala</button>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="card shadow-sm mt-4">
                     <div class="card-header bg-success text-white">
                         <strong>Nuevo concepto</strong>
                     </div>

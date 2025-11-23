@@ -1,4 +1,25 @@
 <?php
+/**
+ * Procesamiento de formulario POST para guardar evaluaciones numéricas y cualitativas.
+ *
+ * Valida token CSRF, recopila datos de puntajes, descripciones, conceptos cualitativos y observaciones,
+ * realiza inserciones/actualizaciones en tablas evaluaciones_maestro, evaluaciones_detalle,
+ * evaluaciones_cualitativas y evaluaciones_cualitativas_detalle.
+ *
+ * Gestiona la transacción para mantener la integridad del maestro y detalle.
+ * Maneja redirecciones exitosas o de error según el rol (docente o estudiante).
+ *
+ * Utiliza variables superglobales:
+ * @global array $_POST Datos del formulario enviado con la evaluación, incluyendo:
+ *      - criterios (array) Puntajes numéricos por criterio.
+ *      - descripciones (array|null) Descripciones opcionales por criterio, sanitizadas.
+ *      - conceptos_cualitativos (array|null) Conceptos cualitativos seleccionados por criterio.
+ *      - observaciones_cualitativas (string|null) Observaciones generales cualitativas.
+ * @global array $_SESSION Datos de sesión incluyendo usuario, curso activo, rol y tokens CSRF.
+ * @global string $_SERVER['REQUEST_METHOD'] Método HTTP para validar POST.
+ *
+ * @return void Redirige a páginas de éxito o error según el resultado del procesamiento.
+ */
 require 'db.php';
 // Requerir sesión activa, no importa si es docente o estudiante, ambos pueden evaluar.
 // Si no hay id_curso_activo en sesión, lo inferiremos desde el equipo evaluado.
@@ -46,6 +67,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $puntajes = [];
     $descripciones = [];
     $puntaje_total = 0;
+    $criterios_meta = [];
+
+    $stmt_meta = $conn->prepare("SELECT id, puntaje_maximo, ponderacion FROM criterios WHERE id_curso = ?");
+    $stmt_meta->bind_param("i", $id_curso_activo);
+    $stmt_meta->execute();
+    $meta_result = $stmt_meta->get_result();
+    while ($row = $meta_result->fetch_assoc()) {
+        $criterios_meta[(int)$row['id']] = [
+            'puntaje_maximo' => max(1, (int)($row['puntaje_maximo'] ?? 5)),
+            'ponderacion' => max(0, (float)($row['ponderacion'] ?? 1)),
+        ];
+    }
+    $stmt_meta->close();
 
     // Recopilar puntajes y calcular el total
     // Aceptar dos formatos:
@@ -54,8 +88,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['criterios']) && is_array($_POST['criterios'])) {
         foreach ($_POST['criterios'] as $id_criterio => $value) {
             $id_criterio = (int)$id_criterio;
+            if (!isset($criterios_meta[$id_criterio])) {
+                continue;
+            }
+            $max_permitido = $criterios_meta[$id_criterio]['puntaje_maximo'];
             $puntaje = (int)$value;
             if ($puntaje < 0) $puntaje = 0;
+            if ($puntaje > $max_permitido) {
+                $puntaje = $max_permitido;
+            }
             $puntajes[$id_criterio] = $puntaje;
             $puntaje_total += $puntaje;
         }
@@ -63,8 +104,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         foreach ($_POST as $key => $value) {
             if (strpos($key, 'criterio_') === 0) {
                 $id_criterio = (int)str_replace('criterio_', '', $key);
+                if (!isset($criterios_meta[$id_criterio])) {
+                    continue;
+                }
+                $max_permitido = $criterios_meta[$id_criterio]['puntaje_maximo'];
                 $puntaje = (int)$value;
                 if ($puntaje < 0) $puntaje = 0;
+                if ($puntaje > $max_permitido) {
+                    $puntaje = $max_permitido;
+                }
                 $puntajes[$id_criterio] = $puntaje;
                 $puntaje_total += $puntaje;
             }
@@ -78,6 +126,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $descripciones[$id_criterio] = htmlspecialchars(trim($desc));
         }
     }
+
+    // NUEVO: Conceptos cualitativos seleccionados desde la evaluación numérica
+    $conceptos_cualitativos_sel = [];
+    if (isset($_POST['conceptos_cualitativos']) && is_array($_POST['conceptos_cualitativos'])) {
+        foreach ($_POST['conceptos_cualitativos'] as $id_criterio => $id_concepto) {
+            $id_criterio = (int)$id_criterio;
+            $id_concepto = (int)$id_concepto;
+            if ($id_criterio > 0 && $id_concepto > 0 && isset($criterios_meta[$id_criterio])) {
+                $conceptos_cualitativos_sel[$id_criterio] = $id_concepto;
+            }
+        }
+    }
+    $observaciones_cualitativas = isset($_POST['observaciones_cualitativas']) ? trim($_POST['observaciones_cualitativas']) : null;
     
     // Iniciar transacción para asegurar la integridad de maestro y detalle
     $conn->begin_transaction();
@@ -140,16 +201,75 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt_detalle->execute();
         }
         
-        // 3. Confirmar transacción
+        // 3. Registrar evaluación cualitativa opcional (si se seleccionaron conceptos)
+        if (!empty($conceptos_cualitativos_sel)) {
+            $escala_cualitativa = get_primary_scale($conn, $id_curso_activo);
+
+            if ($escala_cualitativa) {
+                // Validar que los conceptos pertenezcan a la escala
+                $conceptos_validos = [];
+                $stmt_conceptos = $conn->prepare("SELECT id FROM conceptos_cualitativos WHERE id_escala = ? AND activo = 1");
+                $stmt_conceptos->bind_param("i", $escala_cualitativa['id']);
+                $stmt_conceptos->execute();
+                $result_conceptos = $stmt_conceptos->get_result();
+                while ($row = $result_conceptos->fetch_assoc()) {
+                    $conceptos_validos[(int)$row['id']] = true;
+                }
+                $stmt_conceptos->close();
+
+                $conceptos_filtrados = [];
+                foreach ($conceptos_cualitativos_sel as $id_criterio => $id_concepto) {
+                    if (isset($conceptos_validos[$id_concepto])) {
+                        $conceptos_filtrados[$id_criterio] = $id_concepto;
+                    }
+                }
+
+                if (!empty($conceptos_filtrados)) {
+                    $stmt_cual = $conn->prepare("
+                        INSERT INTO evaluaciones_cualitativas (id_evaluador, id_equipo_evaluado, id_curso, id_escala, observaciones)
+                        VALUES (?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE
+                            id_escala = VALUES(id_escala),
+                            observaciones = VALUES(observaciones),
+                            fecha_evaluacion = CURRENT_TIMESTAMP
+                    ");
+                    $stmt_cual->bind_param("iiiis", $id_evaluador, $id_equipo_evaluado, $id_curso_activo, $escala_cualitativa['id'], $observaciones_cualitativas);
+                    $stmt_cual->execute();
+
+                    $id_eval_cual = $conn->insert_id;
+                    if ($stmt_cual->affected_rows === 2) {
+                        $stmt_fetch_cual = $conn->prepare("SELECT id FROM evaluaciones_cualitativas WHERE id_evaluador = ? AND id_equipo_evaluado = ? AND id_curso = ?");
+                        $stmt_fetch_cual->bind_param("iii", $id_evaluador, $id_equipo_evaluado, $id_curso_activo);
+                        $stmt_fetch_cual->execute();
+                        $id_eval_cual = (int)$stmt_fetch_cual->get_result()->fetch_assoc()['id'];
+                        $stmt_fetch_cual->close();
+
+                        $stmt_delete_cual = $conn->prepare("DELETE FROM evaluaciones_cualitativas_detalle WHERE id_evaluacion = ?");
+                        $stmt_delete_cual->bind_param("i", $id_eval_cual);
+                        $stmt_delete_cual->execute();
+                        $stmt_delete_cual->close();
+                    }
+
+                    $stmt_det_cual = $conn->prepare("
+                        INSERT INTO evaluaciones_cualitativas_detalle (id_evaluacion, id_criterio, id_concepto, qualitative_details)
+                        VALUES (?, ?, ?, ?)
+                    ");
+                    foreach ($conceptos_filtrados as $id_criterio => $id_concepto) {
+                        $detalle_texto = null;
+                        $stmt_det_cual->bind_param("iiis", $id_eval_cual, $id_criterio, $id_concepto, $detalle_texto);
+                        $stmt_det_cual->execute();
+                    }
+                    $stmt_det_cual->close();
+                    $stmt_cual->close();
+                }
+            }
+        }
+
+        // 4. Confirmar transacción
         $conn->commit();
         
         // Redirección exitosa (Volver al dashboard del docente o a la página de éxito del estudiante)
-        if ($_SESSION['es_docente']) {
-            header("Location: dashboard_docente.php?status=" . urlencode("Evaluación registrada/actualizada con éxito."));
-        } else {
-            // Redirigir al estudiante a una página de éxito
-            header("Location: evaluacion_exitosa.php?msg=" . urlencode("Tu coevaluación se ha guardado con éxito."));
-        }
+        header("Location: evaluacion_exitosa.php?msg=" . urlencode("Tu coevaluación se ha guardado con éxito."));
         exit();
 
     } catch (Exception $e) {

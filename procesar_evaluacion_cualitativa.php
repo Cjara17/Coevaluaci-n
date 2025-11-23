@@ -1,6 +1,6 @@
 <?php
 require 'db.php';
-verificar_sesion(true);
+verificar_sesion();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header("Location: dashboard_docente.php");

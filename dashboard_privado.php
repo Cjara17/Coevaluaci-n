@@ -1,5 +1,19 @@
 <?php
-// NUEVO: se agregó header global institucional UCT
+/**
+ * Página de dashboard para docentes, mostrando los equipos registrados en el curso activo
+ * y proporcionando accesos rápidos a funcionalidades de evaluación y gestión.
+ *
+ * Requiere sesión activa de docente y curso activo en $_SESSION.
+ *
+ * Utiliza las siguientes variables superglobales:
+ * @global int $_SESSION['id_usuario'] ID del docente autenticado.
+ * @global int|null $_SESSION['id_curso_activo'] ID del curso activo.
+ * @global string|null $_GET['status'] Mensajes de estado para mostrar alertas.
+ * @global string|null $_GET['error'] Mensajes de error para mostrar alertas.
+ *
+ * @return void Genera salida HTML para el dashboard.
+ */
+ // NUEVO: se agregó header global institucional UCT
 include 'header.php';
 require 'db.php';
 // Requerir ser docente Y tener un curso activo
@@ -92,19 +106,20 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                 <div class="card">
                     <div class="card-header"><h4>Acciones Rápidas</h4></div>
                     <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a href="create_evaluator.php" class="btn btn-primary">Crear Evaluador</a>
-                            <a href="gestionar_criterios.php" class="btn btn-secondary">Gestionar Criterios</a>
-                            <a href="gestionar_conceptos.php" class="btn btn-secondary">Gestionar Conceptos</a>
-                            <a href="import_students.php" class="btn btn-success">Importar Estudiantes</a>
-                            <a href="export_results.php" class="btn btn-info">Exportar Resultados</a>
-                        </div>
+<div class="d-grid gap-2">
+    <a href="create_evaluator.php" class="btn btn-primary">Crear Evaluador</a>
+    <a href="gestionar_criterios.php" class="btn btn-secondary">Gestionar Criterios</a>
+    <a href="gestionar_conceptos.php" class="btn btn-secondary">Gestionar Conceptos</a>
+    <a href="import_students.php" class="btn btn-success">Importar Estudiantes</a>
+    <a href="export_results.php" class="btn btn-info">Exportar Resultados</a>
+</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="public/assets/js/min/dashboard_privado.min.js" defer></script>
 </body>
 </html>

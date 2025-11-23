@@ -1,5 +1,25 @@
 <?php
+/**
+ * Gestión de la carga y procesamiento de listas de estudiantes en formatos CSV o Excel.
+ *
+ * Requiere sesión activa de docente para acceder y un curso activo en $_SESSION['id_curso_activo'].
+ *
+ * Valida el archivo subido, procesa cada fila para insertar o actualizar estudiantes y equipos
+ * asociados al curso activo en sesión.
+ *
+ * Redirige a:
+ * - select_course.php si no hay curso activo en sesión.
+ * - dashboard_docente.php con mensajes de estado o error según el resultado de la carga y validaciones.
+ *
+ * Utiliza múltiples variables superglobales:
+ * @global array $_FILES['lista_estudiantes'] Archivo subido con la lista de estudiantes.
+ * @global int|null $_SESSION['id_curso_activo'] ID del curso activo (nullable).
+ * @global string $_SERVER['REQUEST_METHOD'] Método de la petición HTTP.
+ *
+ * @return void Redirecciona con mensajes de estado o error.
+ */
 require 'db.php';
+
 
 // Verificar si ZipArchive está disponible (solo necesario para Excel)
 $zipDisponible = extension_loaded('zip') && class_exists('ZipArchive');
@@ -210,6 +230,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['lista_estudiantes']))
     }
 }
 
+/**
+ * Verifica si una fila tiene contenido significativo en al menos los primeros tres campos.
+ *
+ * @param array $datos Array de cadenas de texto representando los campos de la fila.
+ * @return bool True si la fila tiene contenido válido, false si está vacía o malformada.
+ */
 function filaTieneContenido(array $datos): bool
 {
     // Verificar que al menos los primeros 3 campos tengan contenido

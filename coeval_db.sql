@@ -103,6 +103,8 @@ CREATE TABLE `criterios` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `descripcion` text NOT NULL,
   `orden` int(11) NOT NULL DEFAULT 0,
+  `puntaje_maximo` int(11) NOT NULL DEFAULT 5,
+  `ponderacion` decimal(6,2) NOT NULL DEFAULT 1.00,
   `activo` tinyint(1) NOT NULL DEFAULT 1,
   `id_curso` int(11) NOT NULL,
   PRIMARY KEY (`id`),

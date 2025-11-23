@@ -1,0 +1,1 @@
+.blur-notas{filter:blur(10px);transition:filter .3s ease-in-out}.col-responsive{padding:10px}@media(max-width:768px){.col-responsive{width:100%;margin-bottom:20px}#btn-toggle-notas{width:100%}}

@@ -12,6 +12,8 @@ if (!function_exists('ensure_qualitative_schema')) {
      */
     function ensure_qualitative_schema(mysqli $conn): void
     {
+        $database = $conn->query("SELECT DATABASE() AS db")->fetch_assoc()['db'];
+
         $queries = [
             "CREATE TABLE IF NOT EXISTS escalas_cualitativas (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -66,6 +68,27 @@ if (!function_exists('ensure_qualitative_schema')) {
             if (!$conn->query($sql)) {
                 error_log('[QualitativeSchema] Error ejecutando DDL: ' . $conn->error);
             }
+        }
+
+        $columnExists = function(string $table, string $column) use ($conn, $database): bool {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS total
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
+            ");
+            $stmt->bind_param("sss", $database, $table, $column);
+            $stmt->execute();
+            $total = (int)$stmt->get_result()->fetch_assoc()['total'];
+            $stmt->close();
+            return $total > 0;
+        };
+
+        if (!$columnExists('evaluaciones_cualitativas_detalle', 'qualitative_details')) {
+            $conn->query("ALTER TABLE evaluaciones_cualitativas_detalle ADD COLUMN qualitative_details TEXT NULL AFTER id_concepto");
+        }
+
+        if (!$columnExists('evaluaciones_detalle', 'numerical_details')) {
+            $conn->query("ALTER TABLE evaluaciones_detalle ADD COLUMN numerical_details TEXT NULL AFTER puntaje");
         }
     }
 }
