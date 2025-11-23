@@ -1,4 +1,24 @@
 <?php
+/**
+ * Maneja el registro de nuevos docentes mediante formulario.
+ *
+ * Valida nombre, correo institucional (@uct.cl), contraseña y confirmación.
+ * Verifica cliente si el correo ya está registrado.
+ * Encripta contraseña usando password_hash antes de insertar en BD.
+ *
+ * Utiliza variables superglobales:
+ * @global string $_SERVER['REQUEST_METHOD'] Método HTTP para determinar POST.
+ * @global string $_POST['nombre'] Nombre completo del docente enviado por POST.
+ * @global string $_POST['email'] Correo institucional enviado por POST.
+ * @global string $_POST['password'] Contraseña enviada por POST.
+ * @global string $_POST['confirm_password'] Confirmación de contraseña enviada por POST.
+ *
+ * Redirige a:
+ * - index.php con mensaje de éxito tras registro.
+ * - Permanece en la misma página mostrando errores si hay validaciones fallidas.
+ *
+ * @return void Procesa registro y renderiza formulario con posibles errores.
+ */
 require 'db.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {

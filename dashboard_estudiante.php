@@ -1,4 +1,23 @@
 <?php
+/**
+ * Dashboard para estudiantes mostrando el equipo que está presentando actualmente.
+ *
+ * Requiere sesión activa de estudiante.
+ * Consulta el equipo en estado de presentación y verifica si el estudiante ya evaluó ese equipo.
+ *
+ * Utiliza variables superglobales:
+ * @global int $_SESSION['id_usuario'] ID del estudiante autenticado.
+ * @global int $_SESSION['id_equipo'] ID del equipo del estudiante.
+ * @global string $_GET['status'] Parámetro opcional para mensajes de estado (por ejemplo, éxito al enviar evaluación).
+ *
+ * Realiza consultas a la base de datos para:
+ * - Obtener equipo en estado 'presentando'.
+ * - Verificar si el estudiante ya ha evaluado al equipo que presenta.
+ *
+ * Muestra interfaz con información del equipo presentando, mensajes informativos o enlaces para evaluar.
+ *
+ * @return void Renderiza página dashboard estudiante.
+ */
 require 'db.php';
 verificar_sesion(false); // Solo para estudiantes
 

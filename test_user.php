@@ -7,7 +7,7 @@ $emails = ['docente@uct.cl','estudiante@alu.uct.cl'];
 <head>
   <meta charset="utf-8">
   <title>Test Usuarios - Coevaluación</title>
-  <style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}pre{background:#f5f5f5;padding:10px;border-radius:6px}</style>
+  <link rel="stylesheet" href="public/assets/css/test_user.css">
 </head>
 <body>
   <h2>Comprobación de usuarios en la base de datos</h2>

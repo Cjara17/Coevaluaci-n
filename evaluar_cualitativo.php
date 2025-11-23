@@ -1,4 +1,17 @@
 <?php
+/**
+ * Página para realizar evaluación cualitativa de un equipo específico en el curso activo.
+ *
+ * Requiere sesión activa y parámetro id_equipo válido en $_GET.
+ *
+ * Muestra formulario con criterios activos y conceptos cualitativos disponibles para asignar evaluaciones.
+ *
+ * Utiliza variables superglobales:
+ * @global int $_GET['id_equipo'] ID del equipo a evaluar.
+ * @global int|null $_SESSION['id_curso_activo'] ID del curso activo.
+ *
+ * @return void Genera formulario HTML para evaluación cualitativa.
+ */
 require 'db.php';
 verificar_sesion(); // Permitir a cualquier evaluador autenticado acceder
 

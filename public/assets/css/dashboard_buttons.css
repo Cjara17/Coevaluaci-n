@@ -1,0 +1,30 @@
+.dashboard-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem; /* uniform spacing */
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.dashboard-buttons > .btn,
+.dashboard-buttons > button {
+  min-width: 140px; /* consistent minimum width for uniformity */
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+  height: auto; /* padding ensures visual height */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+/* For smaller buttons inside forms or links (such as btn-sm), keep consistent */
+.dashboard-buttons > form > button.btn-sm,
+.dashboard-buttons > a.btn-sm {
+  min-width: 110px;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+/* No color, border, font, or hover style changes to preserve Bootstrap defaults */

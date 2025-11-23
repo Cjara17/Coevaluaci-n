@@ -1,4 +1,25 @@
 <?php
+/**
+ * Página que muestra detalles de evaluaciones para un equipo específico dentro del curso activo.
+ *
+ * Requiere sesión activa de docente, curso activo en $_SESSION e ID de equipo válido en $_GET.
+ * El acceso está restringido a usuarios con rol docente mediante la verificación en verificar_sesion(true).
+ *
+ * Redirige a:
+ * - select_course.php si no hay curso activo en sesión ($_SESSION['id_curso_activo']).
+ * - dashboard_docente.php con mensaje de error si el ID de equipo no es proporcionado, es inválido o el equipo no pertenece al curso activo.
+ *
+ * Maneja y muestra:
+ * - Información (nombre, estado) del equipo.
+ * - Estudiantes integrantes del equipo.
+ * - Promedios y detalles de evaluaciones numéricas y cualitativas.
+ *
+ * Utiliza variables superglobales:
+ * @global int|null $_SESSION['id_curso_activo'] ID del curso activo (nullable).
+ * @global int $_GET['id'] ID del equipo a mostrar detalles.
+ *
+ * @return void Genera salida HTML con detalle evaluaciones del equipo.
+ */
 require 'db.php';
 // Requerir ser docente Y tener un curso activo
 verificar_sesion(true);
@@ -133,7 +154,12 @@ if ($num_evaluaciones > 0) {
     }
 }
 
-// Función para obtener la Nota Final basada en puntaje promedio (escala 1-7)
+/**
+ * Calcula la nota final en escala de 1.0 a 7.0 basada en un puntaje promedio de 0 a 100.
+ *
+ * @param float|null $puntaje Puntaje promedio numérico entre 0 y 100.
+ * @return string Nota final formateada, o "N/A" si el puntaje es null.
+ */
 function calcular_nota_final($puntaje) {
     if ($puntaje === null) return "N/A";
 
@@ -220,8 +246,9 @@ $stmt_eval_cual->close();
 <head>
     <meta charset="UTF-8">
     <title>Detalles de Evaluación - <?php echo htmlspecialchars($nombre_equipo); ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="public/assets/css/min/ver_detalles.min.css" />
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -330,11 +357,11 @@ $stmt_eval_cual->close();
 
                                         <?php if (!empty($eval['descripciones'][$id_criterio])): ?>
                                             <?php $collapseId = 'numdesc-' . $eval['id_evaluacion'] . '-' . $id_criterio; ?>
-                                            <small class="text-primary d-block" style="cursor:pointer;"
-                                                   data-bs-toggle="collapse"
-                                                   href="#<?php echo $collapseId; ?>">
-                                                Ver descripción
-                                            </small>
+                                                <small class="text-primary d-block clickable-text"
+                                                       data-bs-toggle="collapse"
+                                                       href="#<?php echo $collapseId; ?>">
+                                                    Ver descripción
+                                                </small>
 
                                             <div class="collapse mt-1 small text-muted text-start" id="<?php echo $collapseId; ?>">
                                                 <?php echo nl2br(htmlspecialchars($eval['descripciones'][$id_criterio])); ?>
@@ -344,9 +371,9 @@ $stmt_eval_cual->close();
                                         <?php if ($qual_match && isset($qual_match['detalles'][$id_criterio])): ?>
                                             <?php $qualDetalle = $qual_match['detalles'][$id_criterio]; ?>
                                             <div class="mt-2">
-                                                <span class="badge text-white" style="background-color: <?php echo htmlspecialchars($qualDetalle['color_hex']); ?>;">
-                                                    <?php echo htmlspecialchars($qualDetalle['concepto']); ?>
-                                                </span>
+                                                        <span class="badge text-white" style="background-color: <?php echo htmlspecialchars($qualDetalle['color_hex']); ?>;">
+                                                            <?php echo htmlspecialchars($qualDetalle['concepto']); ?>
+                                                        </span>
                                                 <?php if (!empty($qualDetalle['qualitative_details'])): ?>
                                                     <small class="d-block text-muted mt-1">
                                                         <?php echo nl2br(htmlspecialchars($qualDetalle['qualitative_details'])); ?>
@@ -430,13 +457,7 @@ $stmt_eval_cual->close();
         <?php endif; ?>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Inicializar tooltips de Bootstrap
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="public/assets/js/min/tooltips.min.js" defer></script>
 </body>
 </html>

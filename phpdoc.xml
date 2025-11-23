@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<phpdoc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/phpDocumentor/phpDocumentor/develop/data/schema/phpdoc.xsd">
+    <title>Plataforma de Coevaluación TEC-UCT</title>
+
+    <paths>
+        <directory>./</directory>
+        <ignore>
+            <directory>vendor</directory>
+            <directory>css</directory>
+            <directory>js</directory>
+            <directory>img</directory>
+            <directory>uploads</directory>
+            <directory>assets</directory>
+        </ignore>
+    </paths>
+
+    <format name="HTML" output="docs" charset="UTF-8" target="directory" />
+</phpdoc>

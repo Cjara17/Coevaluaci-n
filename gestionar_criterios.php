@@ -46,8 +46,9 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
 <head>
     <meta charset="UTF-8">
     <title>Gestionar Criterios de Evaluación</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="public/assets/css/min/gestionar_criterios.min.css" />
 </head>
 <body>
     <div class="container mt-5">
@@ -115,37 +116,37 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                         <?php if ($criterios->num_rows > 0): ?>
                             <?php while($criterio = $criterios->fetch_assoc()): ?>
                             <tr>
-                                <td style="width: 110px;">
-                                    <input type="number"
-                                           class="form-control form-control-sm"
-                                           name="orden"
-                                           form="form-update-<?php echo $criterio['id']; ?>"
-                                           value="<?php echo (int)$criterio['orden']; ?>">
-                                </td>
-                                <td style="min-width: 220px;">
-                                    <textarea
-                                        class="form-control form-control-sm"
-                                        rows="2"
-                                        name="descripcion"
-                                        form="form-update-<?php echo $criterio['id']; ?>"><?php echo htmlspecialchars($criterio['descripcion']); ?></textarea>
-                                </td>
-                                <td class="text-center" style="width: 140px;">
-                                    <input type="number"
-                                           class="form-control form-control-sm"
-                                           name="puntaje_maximo"
-                                           min="1"
-                                           form="form-update-<?php echo $criterio['id']; ?>"
-                                           value="<?php echo (int)($criterio['puntaje_maximo'] ?? 5); ?>">
-                                </td>
-                                <td class="text-center" style="width: 140px;">
-                                    <input type="number"
-                                           class="form-control form-control-sm"
-                                           name="ponderacion"
-                                           min="0"
-                                           step="0.1"
-                                           form="form-update-<?php echo $criterio['id']; ?>"
-                                           value="<?php echo number_format((float)($criterio['ponderacion'] ?? 1), 2, '.', ''); ?>">
-                                </td>
+                            <td class="td-width-110">
+                                <input type="number"
+                                       class="form-control form-control-sm"
+                                       name="orden"
+                                       form="form-update-<?php echo $criterio['id']; ?>"
+                                       value="<?php echo (int)$criterio['orden']; ?>">
+                            </td>
+                            <td class="td-min-width-220">
+                                <textarea
+                                    class="form-control form-control-sm"
+                                    rows="2"
+                                    name="descripcion"
+                                    form="form-update-<?php echo $criterio['id']; ?>"><?php echo htmlspecialchars($criterio['descripcion']); ?></textarea>
+                            </td>
+                            <td class="text-center td-width-140">
+                                <input type="number"
+                                       class="form-control form-control-sm"
+                                       name="puntaje_maximo"
+                                       min="1"
+                                       form="form-update-<?php echo $criterio['id']; ?>"
+                                       value="<?php echo (int)($criterio['puntaje_maximo'] ?? 5); ?>">
+                            </td>
+                            <td class="text-center td-width-140">
+                                <input type="number"
+                                       class="form-control form-control-sm"
+                                       name="ponderacion"
+                                       min="0"
+                                       step="0.1"
+                                       form="form-update-<?php echo $criterio['id']; ?>"
+                                       value="<?php echo number_format((float)($criterio['ponderacion'] ?? 1), 2, '.', ''); ?>">
+                            </td>
                                 <td class="text-center">
                                     <?php if ($criterio['activo']): ?>
                                         <span class="badge bg-success">Activo</span>
@@ -204,23 +205,13 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
     </div>
 
     <!-- Formulario oculto para eliminación -->
-    <form id="form-delete" method="POST" style="display: none;">
+    <form id="form-delete" method="POST" class="hidden-form">
         <input type="hidden" name="action" id="delete-action">
         <input type="hidden" name="id" id="delete-id">
         <input type="hidden" name="confirm" value="yes">
     </form>
 
-    <script>
-        function openDeleteModal(id, action) {
-            document.getElementById('delete-id').value = id;
-            document.getElementById('form-delete').action = action;
-            document.getElementById('delete-action').value = 'delete';
-            document.getElementById('delete-id').name = 'id_criterio'; // Para criterios
-            var modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
-            modal.show();
-        }
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="public/assets/js/min/modal.min.js" defer></script>
 </body>
 </html>

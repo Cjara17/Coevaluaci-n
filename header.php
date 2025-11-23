@@ -36,15 +36,15 @@ if ($es_docente && $id_docente && $id_curso_activo && isset($conn)) {
     }
 }
 ?>
-<header class="d-flex align-items-center justify-content-between p-3" style="background-color: #005A8C; color: white;">
+<header class="d-flex align-items-center justify-content-between p-3 header-main-bg">
     <div class="d-flex align-items-center">
-        <img src="img/logo_uct.png" alt="Logo UCT" style="height: 40px; margin-right: 15px;">
+<img src="img/logo_uct.png" alt="Logo UCT" class="logo-img" loading="lazy">
         <h5 class="mb-0"><?php echo htmlspecialchars($page_title); ?></h5>
     </div>
     <div class="d-flex align-items-center">
         <?php if ($es_docente && !empty($all_cursos)): ?>
             <form action="set_course.php" method="POST" class="d-flex me-3">
-                <select name="id_curso" class="form-select form-select-sm" onchange="this.form.submit()">
+                <select name="id_curso" class="form-select form-select-sm">
                     <?php while ($c = $all_cursos->fetch_assoc()): ?>
                         <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $id_curso_activo) ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($c['nombre_curso'] . ' ' . $c['semestre'] . '-' . $c['anio']); ?>
@@ -59,3 +59,6 @@ if ($es_docente && $id_docente && $id_curso_activo && isset($conn)) {
         <?php endif; ?>
     </div>
 </header>
+
+<link rel="stylesheet" href="public/assets/css/min/header.min.css" />
+<script src="public/assets/js/min/header.min.js" defer></script>

@@ -122,6 +122,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
     <title>Dashboard Docente - Coevaluación</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="public/assets/css/dashboard_buttons.css">
 </head>
 <body style="padding-bottom: 120px;">
     <?php include 'header.php'; ?>
@@ -131,7 +132,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
             <h1>
                 Curso Activo: <?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' ' . $curso_activo['semestre'] . '-' . $curso_activo['anio']); ?>
             </h1>
-            <div class="d-flex gap-2 flex-wrap justify-content-end">
+<div class="dashboard-buttons d-flex flex-wrap justify-content-end">
                 <!-- // NUEVO: unificación de estilo sin cambiar colores -->
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inviteModal">
                     Agregar invitado

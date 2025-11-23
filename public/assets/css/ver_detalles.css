@@ -1,0 +1,5 @@
+.clickable-text {
+    cursor: pointer;
+    color: #0d6efd; /* Bootstrap primary blue for links */
+    display: block;
+}

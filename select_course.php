@@ -1,4 +1,26 @@
 <?php
+/**
+ * Página para que el docente seleccione su curso activo o cree uno nuevo.
+ *
+ * Requiere sesión activa de docente; no requiere curso activo previo.
+ * Permite seleccionar curso asignado para establecerlo como activo en sesión.
+ * Muestra lista de cursos asignados y formulario para crear nuevos cursos.
+ *
+ * Utiliza variables superglobales:
+ * @global int $_SESSION['id_usuario'] ID del docente autenticado.
+ * @global int|null $_SESSION['id_curso_activo'] ID del curso activo (nullable).
+ * @global string $_SERVER['REQUEST_METHOD'] Método HTTP para determinar POST.
+ * @global array $_POST['action'] Acción enviada por POST, usada para seleccionar curso.
+ * @global int $_POST['id_curso'] ID del curso seleccionado por POST.
+ * @global string $_GET['status'] Mensaje de estado enviado por query string (opcional).
+ * @global string $_GET['error'] Mensaje de error enviado por query string (opcional).
+ *
+ * Redirige a:
+ * - dashboard_docente.php tras selección exitosa de curso.
+ * - Permanece en esta página con mensaje de error si el docente intenta acceder a curso no asignado.
+ *
+ * @return void Muestra interfaz de selección y creación de cursos con mensajes de estado o error.
+ */
 require 'db.php';
 // El docente debe estar logueado, pero AÚN no necesita un curso activo.
 verificar_sesion(true, false);

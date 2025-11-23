@@ -1,4 +1,25 @@
 <?php
+/**
+ * Procesamiento de formulario POST para guardar evaluaciones numéricas y cualitativas.
+ *
+ * Valida token CSRF, recopila datos de puntajes, descripciones, conceptos cualitativos y observaciones,
+ * realiza inserciones/actualizaciones en tablas evaluaciones_maestro, evaluaciones_detalle,
+ * evaluaciones_cualitativas y evaluaciones_cualitativas_detalle.
+ *
+ * Gestiona la transacción para mantener la integridad del maestro y detalle.
+ * Maneja redirecciones exitosas o de error según el rol (docente o estudiante).
+ *
+ * Utiliza variables superglobales:
+ * @global array $_POST Datos del formulario enviado con la evaluación, incluyendo:
+ *      - criterios (array) Puntajes numéricos por criterio.
+ *      - descripciones (array|null) Descripciones opcionales por criterio, sanitizadas.
+ *      - conceptos_cualitativos (array|null) Conceptos cualitativos seleccionados por criterio.
+ *      - observaciones_cualitativas (string|null) Observaciones generales cualitativas.
+ * @global array $_SESSION Datos de sesión incluyendo usuario, curso activo, rol y tokens CSRF.
+ * @global string $_SERVER['REQUEST_METHOD'] Método HTTP para validar POST.
+ *
+ * @return void Redirige a páginas de éxito o error según el resultado del procesamiento.
+ */
 require 'db.php';
 // Requerir sesión activa, no importa si es docente o estudiante, ambos pueden evaluar.
 // Si no hay id_curso_activo en sesión, lo inferiremos desde el equipo evaluado.

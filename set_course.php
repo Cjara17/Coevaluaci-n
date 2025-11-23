@@ -1,4 +1,23 @@
 <?php
+/**
+ * Establece el curso activo en la sesión para el docente autenticado.
+ *
+ * Requiere sesión activa de docente; no requiere curso activo previo para acceder.
+ * Valida que el docente esté asociado al curso solicitado antes de establecerlo.
+ *
+ * Utiliza variables superglobales:
+ * @global string $_SERVER['REQUEST_METHOD'] Método HTTP para determinar POST.
+ * @global array $_POST['id_curso'] ID del curso enviado por POST.
+ * @global int $_SESSION['id_usuario'] ID del docente autenticado.
+ * @global int|null $_SESSION['id_curso_activo'] ID del curso activo (nullable).
+ *
+ * Redirige a:
+ * - dashboard_docente.php con mensaje de éxito tras cambiar contexto de curso.
+ * - select_course.php con mensaje de error si el docente no tiene acceso al curso solicitado.
+ * - select_course.php si se accede sin método POST.
+ *
+ * @return void Redirige según flujo descrito.
+ */
 require 'db.php';
 // Solo verifica sesión activa de docente, pero no requiere curso activo de antemano
 verificar_sesion(true, false); 

@@ -1,22 +1,36 @@
+<?php
+/**
+ * Página de login para la Plataforma de Coevaluación TEC-UCT.
+ *
+ * Presenta un formulario de inicio de sesión para usuarios con correo institucional.
+ * Incluye validación básica de formato del correo y manejo de errores simples.
+ *
+ * @return void Genera salida HTML para el formulario de login.
+ *
+ * NOTA: El archivo contiene principalmente HTML y scripts embebidos para la interfaz.
+ */
+?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Plataforma de Coevaluación</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="public/assets/css/min/index.min.css" />
 </head>
 
 <body>
 
     <!-- NUEVO: Se reestructuró la vista para eliminar espacio vertical entre logo y formulario -->
-    <div class="login-wrapper" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background-image: url('img/fondoAraucarias.png'); background-size: cover; background-position: center; background-attachment: fixed; background-repeat: no-repeat;">
+    <div class="login-wrapper-bg-flex">
         <div class="text-center">
-            <img src="img/logo_uct.png" alt="Logo UCT" style="height: 80px;">
+            <img src="img/logo_uct.png" alt="Logo UCT" class="logo-img-lg" loading="lazy" />
         </div>
 
-        <div class="container" style="margin-top: 20px;">
+        <div class="container container-mt20">
             <div class="row justify-content-center w-100">
                 <div class="col-md-8 col-lg-6">
                     <div class="card shadow login-card">
@@ -32,12 +46,12 @@
                             <form action="login.php" method="POST">
                                 <div class="mb-3">
                                     <label for="email" class="form-label">Correo Institucional</label>
-                                    <input type="email" class="form-control" id="email" name="email" required placeholder="usuario@alu.uct.cl o usuario@uct.cl">
+                                    <input type="email" class="form-control" id="email" name="email" required placeholder="usuario@alu.uct.cl o usuario@uct.cl" />
                                 </div>
 
-                                <div class="mb-3" id="password-field" style="display: none;">
+                                <div class="mb-3 hidden-element" id="password-field">
                                     <label for="password" class="form-label">Contraseña</label>
-                                    <input type="password" class="form-control" id="password" name="password">
+                                    <input type="password" class="form-control" id="password" name="password" />
                                 </div>
 
                                 <div class="d-grid">
@@ -61,19 +75,6 @@
         </div>
     </div>
 
-    <script>
-        document.getElementById('email').addEventListener('input', function() {
-            const email = this.value;
-            const passwordField = document.getElementById('password-field');
-            
-            if (email.length > 0 && !email.endsWith('@alu.uct.cl')) {
-                passwordField.style.display = 'block';
-                document.getElementById('password').required = true;
-            } else {
-                passwordField.style.display = 'none';
-                document.getElementById('password').required = false;
-            }
-        });
-    </script>
+    <script src="public/assets/js/min/login.min.js" defer></script>
 </body>
 </html>
