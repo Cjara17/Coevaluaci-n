@@ -321,15 +321,16 @@ include 'header.php';
                             $qual_total = isset($qual_summary['total']) ? (int)$qual_summary['total'] : 0;
                             $qual_last = (!empty($qual_summary['ultima_fecha'])) ? date("d/m H:i", strtotime($qual_summary['ultima_fecha'])) : null;
                             
-                            // Para individual, obtener estado de presentación del equipo
+                            // Para individual, obtener estado de presentación individual del estudiante
                             $estado_presentacion = 'pendiente';
-                            if (!$es_grupal && isset($item['id_equipo']) && $item['id_equipo']) {
-                                $stmt_estado = $conn->prepare("SELECT estado_presentacion FROM equipos WHERE id = ?");
-                                $stmt_estado->bind_param("i", $item['id_equipo']);
+                            if (!$es_grupal) {
+                                // En evaluaciones individuales, usar el estado de presentación individual del estudiante
+                                $stmt_estado = $conn->prepare("SELECT estado_presentacion_individual FROM usuarios WHERE id = ?");
+                                $stmt_estado->bind_param("i", $id_item);
                                 $stmt_estado->execute();
                                 $estado_result = $stmt_estado->get_result()->fetch_assoc();
-                                if ($estado_result) {
-                                    $estado_presentacion = $estado_result['estado_presentacion'];
+                                if ($estado_result && isset($estado_result['estado_presentacion_individual'])) {
+                                    $estado_presentacion = $estado_result['estado_presentacion_individual'];
                                 }
                                 $stmt_estado->close();
                             } elseif ($es_grupal) {
@@ -390,32 +391,33 @@ include 'header.php';
                                 <a href="ver_detalles.php?id=<?php echo $id_item; ?>" class="btn btn-sm btn-info ms-2">Detalles</a>
                                 <a href="evaluar_cualitativo.php?id_equipo=<?php echo $id_item; ?>" class="btn btn-sm btn-outline-secondary ms-2 mt-2">Eval. cualitativa</a>
                             <?php else: ?>
-                                <?php if (isset($item['id_equipo']) && $item['id_equipo']): ?>
-                                    <form action="gestionar_presentacion.php" method="POST" class="d-inline">
-                                        <input type="hidden" name="id_equipo" value="<?php echo $item['id_equipo']; ?>">
-                                        <input type="hidden" name="id_evaluacion" value="<?php echo $id_evaluacion; ?>">
-                                        <?php if ($estado_presentacion == 'pendiente'): ?>
-                                            <input type="hidden" name="accion" value="iniciar">
-                                            <button type="submit" class="btn btn-sm btn-primary">Iniciar Presentación</button>
-                                        <?php elseif ($estado_presentacion == 'presentando'): ?>
-                                            <input type="hidden" name="accion" value="terminar">
-                                            <button type="submit" class="btn btn-sm btn-success">Terminar Presentación</button>
-                                        <?php endif; ?>
-                                    </form>
-                                    <?php if ($estado_presentacion == 'finalizado' || $estado_presentacion == 'presentando'): ?>
-                                        <form action="gestionar_presentacion.php" method="POST" class="d-inline">
-                                            <input type="hidden" name="id_equipo" value="<?php echo $item['id_equipo']; ?>">
-                                            <input type="hidden" name="id_evaluacion" value="<?php echo $id_evaluacion; ?>">
-                                            <input type="hidden" name="accion" value="reiniciar">
-                                            <button type="submit" class="btn btn-sm btn-warning ms-2" 
-                                                    onclick="return confirm('¿Estás seguro de reiniciar esta presentación?')">
-                                                Reiniciar Presentación
-                                            </button>
-                                        </form>
+                                <!-- Para evaluaciones individuales, usar id_estudiante en lugar de id_equipo -->
+                                <form action="gestionar_presentacion.php" method="POST" class="d-inline">
+                                    <input type="hidden" name="id_estudiante" value="<?php echo $id_item; ?>">
+                                    <input type="hidden" name="id_evaluacion" value="<?php echo $id_evaluacion; ?>">
+                                    <?php if ($estado_presentacion == 'pendiente'): ?>
+                                        <input type="hidden" name="accion" value="iniciar">
+                                        <button type="submit" class="btn btn-sm btn-primary">Iniciar Presentación</button>
+                                    <?php elseif ($estado_presentacion == 'presentando'): ?>
+                                        <input type="hidden" name="accion" value="terminar">
+                                        <button type="submit" class="btn btn-sm btn-success">Terminar Presentación</button>
                                     <?php endif; ?>
+                                </form>
+                                <?php if ($estado_presentacion == 'finalizado' || $estado_presentacion == 'presentando'): ?>
+                                    <form action="gestionar_presentacion.php" method="POST" class="d-inline">
+                                        <input type="hidden" name="id_estudiante" value="<?php echo $id_item; ?>">
+                                        <input type="hidden" name="id_evaluacion" value="<?php echo $id_evaluacion; ?>">
+                                        <input type="hidden" name="accion" value="reiniciar">
+                                        <button type="submit" class="btn btn-sm btn-warning ms-2" 
+                                                onclick="return confirm('¿Estás seguro de reiniciar esta presentación?')">
+                                            Reiniciar Presentación
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
+                                <?php if (isset($item['id_equipo']) && $item['id_equipo']): ?>
                                     <a href="ver_detalles.php?id=<?php echo $item['id_equipo']; ?>" class="btn btn-sm btn-info ms-2">Detalles</a>
                                 <?php else: ?>
-                                    <span class="text-muted">Sin equipo</span>
+                                    <a href="ver_detalles.php?id=<?php echo $id_item; ?>" class="btn btn-sm btn-info ms-2">Detalles</a>
                                 <?php endif; ?>
                             <?php endif; ?>
                         </td>

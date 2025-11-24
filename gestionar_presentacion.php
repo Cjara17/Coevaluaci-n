@@ -12,10 +12,14 @@ if (!$id_curso_activo) {
     exit();
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_equipo']) && isset($_POST['accion'])) {
-
-    $id_equipo = (int)$_POST['id_equipo'];
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])) {
     $accion = $_POST['accion'];
+    $id_evaluacion = isset($_POST['id_evaluacion']) ? (int)$_POST['id_evaluacion'] : null;
+    
+    // Determinar si es una presentación individual o grupal
+    $es_individual = isset($_POST['id_estudiante']) && !isset($_POST['id_equipo']);
+    $id_estudiante = isset($_POST['id_estudiante']) ? (int)$_POST['id_estudiante'] : null;
+    $id_equipo = isset($_POST['id_equipo']) ? (int)$_POST['id_equipo'] : null;
 
     $nuevo_estado = '';
     $mensaje = '';
@@ -39,9 +43,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_equipo']) && isset(
             exit();
     }
 
-    // Consulta CLAVE: Actualiza el estado, pero SOLO si el equipo pertenece al curso activo
-    $stmt = $conn->prepare("UPDATE equipos SET estado_presentacion = ? WHERE id = ? AND id_curso = ?");
-    $stmt->bind_param("sii", $nuevo_estado, $id_equipo, $id_curso_activo);
+    // Si se proporciona id_estudiante (evaluación individual), actualizar el estado del estudiante
+    if ($id_estudiante) {
+        // Verificar que el estudiante pertenece al curso activo
+        $stmt_check = $conn->prepare("SELECT id FROM usuarios WHERE id = ? AND id_curso = ? AND es_docente = 0");
+        $stmt_check->bind_param("ii", $id_estudiante, $id_curso_activo);
+        $stmt_check->execute();
+        if ($stmt_check->get_result()->num_rows == 0) {
+            $stmt_check->close();
+            if ($id_evaluacion) {
+                header("Location: ver_evaluacion.php?id=" . $id_evaluacion . "&error=" . urlencode("Estudiante no encontrado o no pertenece al curso activo."));
+            } else {
+                header("Location: dashboard_docente.php?error=" . urlencode("Estudiante no encontrado o no pertenece al curso activo."));
+            }
+            exit();
+        }
+        $stmt_check->close();
+        
+        // Actualizar estado de presentación individual del estudiante
+        $stmt = $conn->prepare("UPDATE usuarios SET estado_presentacion_individual = ? WHERE id = ? AND id_curso = ?");
+        $stmt->bind_param("sii", $nuevo_estado, $id_estudiante, $id_curso_activo);
+    } else if ($id_equipo) {
+        // Consulta CLAVE: Actualiza el estado, pero SOLO si el equipo pertenece al curso activo
+        $stmt = $conn->prepare("UPDATE equipos SET estado_presentacion = ? WHERE id = ? AND id_curso = ?");
+        $stmt->bind_param("sii", $nuevo_estado, $id_equipo, $id_curso_activo);
+    } else {
+        header("Location: dashboard_docente.php?error=" . urlencode("No se proporcionó ID de equipo o estudiante."));
+        exit();
+    }
 
     if ($stmt->execute()) {
         if ($stmt->affected_rows > 0) {

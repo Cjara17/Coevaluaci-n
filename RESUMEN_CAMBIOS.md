@@ -2,7 +2,15 @@
 
 ## 🎯 Resumen Corto
 
-Se ha implementado un **sistema completo de evaluaciones** que permite crear evaluaciones grupales e individuales, gestionar estudiantes y equipos, y controlar el flujo de presentaciones. El sistema reemplaza la tabla de equipos en el dashboard por una tabla de evaluaciones más flexible, permite seleccionar evaluaciones activas con un simple click, y habilita/deshabilita botones según el contexto. Se agregaron funcionalidades de gestión de equipos (crear, editar, eliminar, asignar estudiantes) y mejoras en los botones de control de presentaciones (iniciar, terminar, reiniciar) tanto para equipos como para estudiantes individuales.
+Se ha implementado un **sistema completo de evaluaciones** que permite crear evaluaciones grupales e individuales, gestionar estudiantes y equipos, y controlar el flujo de presentaciones. El sistema incluye:
+
+- **Sistema de Rúbricas**: Tabla editable tipo rúbrica donde los docentes pueden configurar criterios, opciones y descripciones. Los evaluadores ven la misma rúbrica y seleccionan opciones haciendo clic en las descripciones.
+
+- **Escala de Notas Automática**: Se genera automáticamente basándose en el puntaje máximo, rendimiento mínimo y nota mínima configurados. Muestra puntajes enteros con sus notas correspondientes.
+
+- **Evaluaciones Individuales Corregidas**: Cada estudiante tiene su evaluación independiente, incluso si están en el mismo equipo.
+
+- **Sistema de Historial**: Permite ver el historial completo de evaluaciones de estudiantes y equipos (incluyendo eliminados), con detalles colapsables de cada evaluación.
 
 **Script SQL completo disponible en:** `instrucciones.txt`
 
@@ -464,3 +472,209 @@ Email: estudiante5@alu.uct.cl (sin contraseña)
 **Archivos Modificados:** 3  
 **Tablas Nuevas:** 1 (`evaluaciones`)  
 **Script SQL:** Ver `instrucciones.txt`
+
+---
+
+# 📋 RESUMEN DE CAMBIOS - Sistema de Rúbricas y Escala de Notas
+
+**Fecha:** Diciembre 2025  
+**Objetivo:** Implementar sistema de rúbricas editable, escala de notas automática, y mejoras en el proceso de evaluación.
+
+---
+
+## ✅ Cambios Completados
+
+### 1. **Sistema de Rúbricas Editable** ✅
+
+#### Nueva Estructura:
+- **Tabla `opciones_evaluacion`**: Almacena las opciones de evaluación (ej: "Excelente", "Bueno", "Regular", "Malo") con sus puntajes
+- **Tabla `criterio_opcion_descripciones`**: Almacena las descripciones específicas para cada combinación de criterio-opción
+
+#### Funcionalidades:
+- ✅ **Vista de rúbrica tipo tabla**: Criterios en filas, opciones en columnas
+- ✅ **Edición inline**: Se pueden editar directamente nombres de criterios, opciones, puntajes y descripciones
+- ✅ **Agregar criterios**: Botón para agregar nuevos criterios
+- ✅ **Agregar opciones**: Botón para agregar nuevas opciones con su puntaje
+- ✅ **Eliminar criterios y opciones**: Con confirmación
+- ✅ **Cálculo automático**: El puntaje total máximo se calcula automáticamente
+- ✅ **Exportar a Excel**: Botón para exportar la rúbrica completa a formato Excel
+
+#### Archivos Creados:
+- `exportar_rubrica.php`: Genera archivo Excel con la rúbrica
+
+#### Archivos Modificados:
+- `gestionar_criterios.php`: Completamente reescrito para mostrar rúbrica tipo tabla
+- `criterios_actions.php`: Agregadas acciones para gestionar opciones y descripciones
+
+---
+
+### 2. **Sistema de Escala de Notas Automática** ✅
+
+#### Nueva Funcionalidad:
+- **Escala de notas dinámica**: Se genera automáticamente basándose en:
+  - Puntaje total máximo (calculado desde criterios y opciones)
+  - Rendimiento mínimo (porcentaje configurable, ej: 60%)
+  - Nota mínima (1.0 o 2.0, configurable)
+
+#### Características:
+- ✅ **Escala vertical**: Muestra puntajes enteros (0, 1, 2, 3...) con sus notas correspondientes
+- ✅ **Cálculo automático**: La nota se calcula usando el rendimiento mínimo como base
+  - Si el rendimiento mínimo es 60% y el puntaje máximo es 30:
+    - Puntaje mínimo requerido = 18 puntos (60% de 30)
+    - Nota 4.0 corresponde a 18 puntos
+    - Notas inferiores a 4.0 van desde la nota mínima hasta 4.0
+    - Notas superiores a 4.0 van desde 4.0 hasta 7.0
+- ✅ **Nota mínima configurable**: Dropdown con opciones 1.0 y 2.0
+- ✅ **Actualización automática**: La escala se regenera cuando cambia:
+  - El rendimiento mínimo
+  - Los puntajes de las opciones
+  - La nota mínima
+- ✅ **Solo lectura**: La escala no es editable directamente, solo se actualiza automáticamente
+
+#### Archivos Modificados:
+- `gestionar_criterios.php`: 
+  - Agregada tabla "Escala de Notas"
+  - Agregado campo "Rendimiento Mínimo" con dropdown "Nota Mínima"
+  - Funciones de cálculo de escala
+- `criterios_actions.php`: Agregada acción para actualizar nota mínima
+- `db.php`: Agregada columna `nota_minima` a tabla `cursos`
+
+---
+
+### 3. **Vista de Rúbrica para Evaluadores** ✅
+
+#### Cambios en `evaluar.php`:
+- ✅ **Vista tipo rúbrica**: Muestra criterios en filas y opciones en columnas (igual que en "Criterios y Escala de Notas")
+- ✅ **Descripciones como botones**: Cada celda de descripción es un botón clickeable
+  - Al hacer clic, se selecciona esa opción para el criterio
+  - El botón se resalta visualmente (fondo azul)
+  - Se deseleccionan automáticamente las otras opciones del mismo criterio
+- ✅ **Información visible**: Cada columna muestra el nombre de la opción y su puntaje
+- ✅ **Sin conceptos cualitativos**: Eliminados dropdowns y secciones de conceptos cualitativos de la vista del evaluador
+
+#### Archivos Modificados:
+- `evaluar.php`: Completamente reescrito para mostrar rúbrica tipo tabla con botones
+
+---
+
+### 4. **Corrección de Evaluaciones Individuales** ✅
+
+#### Problema Resuelto:
+- **Antes**: Si dos estudiantes estaban en el mismo equipo, al evaluar a uno se le daba la nota a ambos
+- **Ahora**: Cada estudiante tiene su evaluación independiente, incluso si están en el mismo equipo
+
+#### Solución Implementada:
+- ✅ **Parámetro `id_estudiante`**: `evaluar.php` ahora acepta `id_estudiante` además de `id_equipo`
+- ✅ **Identificador único**: Para evaluaciones individuales, se usa el `id` del estudiante directamente como `id_equipo_evaluado`
+- ✅ **Detección automática**: El sistema detecta si es evaluación individual o grupal
+
+#### Archivos Modificados:
+- `evaluar.php`: Agregado soporte para `id_estudiante`
+- `dashboard_estudiante.php`: Pasa `id_estudiante` en lugar de `id_equipo` para evaluaciones individuales
+
+---
+
+### 5. **Sistema de Historial de Evaluaciones** ✅
+
+#### Nueva Funcionalidad:
+- **Página de Historial**: Muestra todos los estudiantes y equipos (incluyendo eliminados) con sus evaluaciones
+
+#### Características:
+- ✅ **Vista de dos columnas**: 
+  - Izquierda: Lista de estudiantes con número de evaluaciones
+  - Derecha: Lista de equipos (activos y eliminados) con número de evaluaciones
+- ✅ **Equipos eliminados**: Se muestran con badge rojo "Eliminado"
+- ✅ **Historial completo**: Al hacer clic en "Ver Historial", se muestran:
+  - Todas las evaluaciones realizadas (incluso si fueron reiniciadas)
+  - Para equipos: Integrantes históricos (si el equipo fue eliminado, intenta recuperarlos de logs)
+  - Detalles de cada evaluación con:
+    - Evaluador (docente o estudiante)
+    - Puntaje máximo
+    - Puntaje obtenido
+    - Rendimiento mínimo
+    - Nota otorgada
+    - Detalle por criterios con opción seleccionada
+- ✅ **Detalles colapsables**: Los detalles de cada evaluación están ocultos por defecto
+  - Click en el nombre de la evaluación para expandir/colapsar
+  - Indicador visual (chevron) que rota al expandir
+
+#### Archivos Creados:
+- `historial.php`: Página principal con lista de estudiantes y equipos
+- `ver_historial.php`: Página de detalles de historial de un estudiante o equipo
+
+#### Archivos Modificados:
+- `dashboard_docente.php`: Agregado botón "Historial"
+
+---
+
+## 📊 Cambios en Base de Datos
+
+### Nuevas Tablas:
+1. **`opciones_evaluacion`**: Opciones de evaluación con nombre, puntaje y orden
+2. **`criterio_opcion_descripciones`**: Descripciones para cada combinación criterio-opción
+3. **`escala_notas_curso`**: Escala de notas generada automáticamente (puntajes enteros con notas)
+
+### Nuevas Columnas:
+- **`cursos.nota_minima`**: Nota mínima de la escala (1.0 o 2.0)
+- **`usuarios.estado_presentacion_individual`**: Estado de presentación para evaluaciones individuales
+- **`usuarios.student_id`**: ID único del estudiante
+
+---
+
+## 🎯 Flujo de Uso del Sistema
+
+### Para el Docente:
+
+1. **Configurar Rúbrica**:
+   - Ir a "Criterios y Escala de Notas"
+   - Editar criterios, opciones y descripciones directamente en la tabla
+   - Configurar rendimiento mínimo y nota mínima
+   - La escala de notas se genera automáticamente
+
+2. **Evaluar**:
+   - Los evaluadores ven la rúbrica igual que en "Criterios y Escala de Notas"
+   - Hacen clic en las descripciones para seleccionar la opción
+   - El sistema guarda el puntaje correspondiente
+
+3. **Ver Historial**:
+   - Click en "Historial" en el dashboard
+   - Ver lista de estudiantes y equipos
+   - Click en "Ver Historial" para ver todas las evaluaciones
+   - Expandir detalles de cada evaluación haciendo clic en su nombre
+
+---
+
+## 📋 Resumen de Funcionalidades
+
+### Sistema de Rúbricas:
+- ✅ Tabla editable con criterios y opciones
+- ✅ Edición inline de nombres, puntajes y descripciones
+- ✅ Agregar/eliminar criterios y opciones
+- ✅ Exportar a Excel
+- ✅ Cálculo automático de puntaje máximo
+
+### Escala de Notas:
+- ✅ Generación automática basada en puntaje máximo y rendimiento mínimo
+- ✅ Nota mínima configurable (1.0 o 2.0)
+- ✅ Escala vertical con puntajes enteros
+- ✅ Actualización automática al cambiar parámetros
+
+### Vista de Evaluación:
+- ✅ Rúbrica tipo tabla para evaluadores
+- ✅ Descripciones como botones clickeables
+- ✅ Selección visual clara
+- ✅ Sin conceptos cualitativos
+
+### Historial:
+- ✅ Lista de estudiantes y equipos (incluyendo eliminados)
+- ✅ Historial completo de evaluaciones
+- ✅ Detalles colapsables por evaluación
+- ✅ Información de integrantes históricos para equipos eliminados
+
+---
+
+**Estado:** ✅ COMPLETADO  
+**Archivos Nuevos:** 3 (`exportar_rubrica.php`, `historial.php`, `ver_historial.php`)  
+**Archivos Modificados:** 6 (`gestionar_criterios.php`, `criterios_actions.php`, `evaluar.php`, `dashboard_estudiante.php`, `dashboard_docente.php`, `db.php`)  
+**Tablas Nuevas:** 3 (`opciones_evaluacion`, `criterio_opcion_descripciones`, `escala_notas_curso`)  
+**Columnas Nuevas:** 3 (`nota_minima`, `estado_presentacion_individual`, `student_id`)

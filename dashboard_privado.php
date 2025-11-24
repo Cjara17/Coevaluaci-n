@@ -108,7 +108,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                     <div class="card-body">
 <div class="d-grid gap-2">
     <a href="create_evaluator.php" class="btn btn-primary">Crear Evaluador</a>
-    <a href="gestionar_criterios.php" class="btn btn-secondary">Gestionar Criterios</a>
+    <a href="gestionar_criterios.php" class="btn btn-secondary">Criterios y Escala de Notas</a>
     <a href="gestionar_conceptos.php" class="btn btn-secondary">Gestionar Conceptos</a>
     <a href="import_students.php" class="btn btn-success">Importar Estudiantes</a>
     <a href="export_results.php" class="btn btn-info">Exportar Resultados</a>

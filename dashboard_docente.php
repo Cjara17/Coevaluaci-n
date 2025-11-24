@@ -260,6 +260,9 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 <a href="gestionar_estudiantes_equipos.php" class="btn btn-primary">
                     Estudiantes y Equipos
                 </a>
+                <a href="historial.php" class="btn btn-info">
+                    Historial
+                </a>
                 <a href="dashboard_privado.php" class="btn btn-dark">Vista privada</a>
             </div>
         </div>
@@ -414,7 +417,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 </button>
                 <a href="gestionar_criterios.php" class="btn btn-info <?php echo !$tiene_evaluacion_seleccionada ? 'disabled' : ''; ?>"
                    <?php echo !$tiene_evaluacion_seleccionada ? 'tabindex="-1" aria-disabled="true" onclick="return false;" title="Debes seleccionar una evaluación iniciada o cerrada"' : ''; ?>>
-                    Gestionar Criterios
+                    Criterios y Escala de Notas
                 </a>
                 <a href="gestionar_conceptos.php" class="btn btn-secondary">
                     Conceptos Cualitativos

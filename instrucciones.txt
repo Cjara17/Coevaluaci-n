@@ -5,6 +5,7 @@ SCRIPT SQL COMPLETO PARA ACTUALIZAR LA BASE DE DATOS
 Este script agrega todas las nuevas funcionalidades implementadas:
 - Ponderaciones para estudiantes e invitados
 - Sistema de evaluaciones (grupales e individuales)
+- Sistema de rúbricas con opciones de evaluación editables
 
 INSTRUCCIONES:
 1. Abre phpMyAdmin o tu cliente MySQL
@@ -77,6 +78,42 @@ CREATE TABLE IF NOT EXISTS `evaluaciones` (
     CONSTRAINT `evaluaciones_ibfk_1` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ========================================
+-- PARTE 3: SISTEMA DE RÚBRICAS
+-- ========================================
+
+-- Campo: Rendimiento mínimo (si ya existe, ignora el error #1060)
+ALTER TABLE `cursos` 
+ADD COLUMN `rendimiento_minimo` decimal(5,2) DEFAULT 40.00 
+COMMENT 'Porcentaje mínimo para aprobar con nota 4.0 (0-100)' 
+AFTER `ponderacion_unica_invitados`;
+
+-- Crear tabla opciones_evaluacion para las opciones de evaluación (columnas de la rúbrica)
+CREATE TABLE IF NOT EXISTS `opciones_evaluacion` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `id_curso` int(11) NOT NULL,
+    `nombre` varchar(100) NOT NULL,
+    `puntaje` decimal(10,2) NOT NULL DEFAULT 0.00,
+    `orden` int(11) NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    KEY `id_curso` (`id_curso`),
+    CONSTRAINT `opciones_evaluacion_ibfk_1` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Crear tabla criterio_opcion_descripciones para almacenar descripciones de cada celda de la rúbrica
+CREATE TABLE IF NOT EXISTS `criterio_opcion_descripciones` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `id_criterio` int(11) NOT NULL,
+    `id_opcion` int(11) NOT NULL,
+    `descripcion` text DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `idx_criterio_opcion` (`id_criterio`, `id_opcion`),
+    KEY `id_criterio` (`id_criterio`),
+    KEY `id_opcion` (`id_opcion`),
+    CONSTRAINT `criterio_opcion_desc_ibfk_1` FOREIGN KEY (`id_criterio`) REFERENCES `criterios` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `criterio_opcion_desc_ibfk_2` FOREIGN KEY (`id_opcion`) REFERENCES `opciones_evaluacion` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 ===========================================
 NOTAS IMPORTANTES:
 ===========================================
@@ -113,5 +150,7 @@ DESCRIBE cursos;
 SHOW TABLES LIKE 'docente_curso_log';
 SHOW TABLES LIKE 'invitado_curso';
 SHOW TABLES LIKE 'evaluaciones';
+SHOW TABLES LIKE 'opciones_evaluacion';
+SHOW TABLES LIKE 'criterio_opcion_descripciones';
 
 ===========================================

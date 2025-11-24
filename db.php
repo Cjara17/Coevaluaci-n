@@ -85,6 +85,56 @@ if (!function_exists('ensure_logs_table')) {
 
 ensure_logs_table($conn);
 
+if (!function_exists('ensure_usuarios_student_id')) {
+    function ensure_usuarios_student_id(mysqli $conn): void
+    {
+        $database = $conn->query("SELECT DATABASE() AS db")->fetch_assoc()['db'];
+        
+        $stmt = $conn->prepare("
+            SELECT COUNT(*) AS total
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'student_id'
+        ");
+        $stmt->bind_param("s", $database);
+        $stmt->execute();
+        $total = (int)$stmt->get_result()->fetch_assoc()['total'];
+        $stmt->close();
+        
+        if ($total == 0) {
+            // Agregar la columna student_id si no existe
+            $conn->query("ALTER TABLE usuarios ADD COLUMN student_id varchar(100) DEFAULT NULL AFTER email");
+            // Agregar índice único si no existe
+            $conn->query("ALTER TABLE usuarios ADD UNIQUE KEY idx_student_id (student_id)");
+        }
+    }
+}
+
+ensure_usuarios_student_id($conn);
+
+if (!function_exists('ensure_usuarios_estado_presentacion_individual')) {
+    function ensure_usuarios_estado_presentacion_individual(mysqli $conn): void
+    {
+        $database = $conn->query("SELECT DATABASE() AS db")->fetch_assoc()['db'];
+        
+        $stmt = $conn->prepare("
+            SELECT COUNT(*) AS total
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'estado_presentacion_individual'
+        ");
+        $stmt->bind_param("s", $database);
+        $stmt->execute();
+        $total = (int)$stmt->get_result()->fetch_assoc()['total'];
+        $stmt->close();
+        
+        if ($total == 0) {
+            // Agregar la columna estado_presentacion_individual si no existe
+            $conn->query("ALTER TABLE usuarios ADD COLUMN estado_presentacion_individual varchar(20) DEFAULT 'pendiente' COMMENT 'Estado de presentación para evaluaciones individuales' AFTER id_curso");
+        }
+    }
+}
+
+ensure_usuarios_estado_presentacion_individual($conn);
+
 if (!function_exists('ensure_criterios_extended_schema')) {
     function ensure_criterios_extended_schema(mysqli $conn): void
     {
@@ -193,6 +243,122 @@ if (!function_exists('ensure_evaluaciones_schema')) {
 }
 
 ensure_evaluaciones_schema($conn);
+
+if (!function_exists('ensure_cursos_rendimiento_minimo')) {
+    function ensure_cursos_rendimiento_minimo(mysqli $conn): void
+    {
+        $database = $conn->query("SELECT DATABASE() AS db")->fetch_assoc()['db'];
+        $columnExists = function(string $column) use ($conn, $database): bool {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS total
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'cursos' AND COLUMN_NAME = ?
+            ");
+            $stmt->bind_param("ss", $database, $column);
+            $stmt->execute();
+            $total = (int)$stmt->get_result()->fetch_assoc()['total'];
+            $stmt->close();
+            return $total > 0;
+        };
+
+        if (!$columnExists('rendimiento_minimo')) {
+            $conn->query("ALTER TABLE cursos ADD COLUMN rendimiento_minimo decimal(5,2) DEFAULT 40.00 COMMENT 'Porcentaje mínimo para aprobar con nota 4.0 (0-100)' AFTER ponderacion_unica_invitados");
+        }
+    }
+}
+
+ensure_cursos_rendimiento_minimo($conn);
+
+if (!function_exists('ensure_cursos_nota_minima')) {
+    function ensure_cursos_nota_minima(mysqli $conn): void
+    {
+        $columnExists = function($columnName) use ($conn) {
+            $stmt = $conn->prepare("SELECT COUNT(*) as total FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cursos' AND COLUMN_NAME = ?");
+            $stmt->bind_param("s", $columnName);
+            $stmt->execute();
+            $total = (int)$stmt->get_result()->fetch_assoc()['total'];
+            $stmt->close();
+            return $total > 0;
+        };
+        
+        if (!$columnExists('nota_minima')) {
+            $conn->query("ALTER TABLE cursos ADD COLUMN nota_minima decimal(3,1) NOT NULL DEFAULT 1.0 COMMENT 'Nota mínima de la escala (1.0 o 2.0)' AFTER rendimiento_minimo");
+        }
+    }
+}
+
+ensure_cursos_nota_minima($conn);
+
+if (!function_exists('ensure_opciones_evaluacion_schema')) {
+    function ensure_opciones_evaluacion_schema(mysqli $conn): void
+    {
+        $sql = "
+            CREATE TABLE IF NOT EXISTS opciones_evaluacion (
+                id int(11) NOT NULL AUTO_INCREMENT,
+                id_curso int(11) NOT NULL,
+                nombre varchar(100) NOT NULL,
+                puntaje decimal(10,2) NOT NULL DEFAULT 0.00,
+                orden int(11) NOT NULL DEFAULT 0,
+                PRIMARY KEY (id),
+                KEY id_curso (id_curso),
+                CONSTRAINT opciones_evaluacion_ibfk_1 FOREIGN KEY (id_curso) REFERENCES cursos (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ";
+        if (!$conn->query($sql)) {
+            error_log('[OpcionesEvaluacionTable] Error creando tabla opciones_evaluacion: ' . $conn->error);
+        }
+    }
+}
+
+if (!function_exists('ensure_criterio_opcion_descripciones_schema')) {
+    function ensure_criterio_opcion_descripciones_schema(mysqli $conn): void
+    {
+        $sql = "
+            CREATE TABLE IF NOT EXISTS criterio_opcion_descripciones (
+                id int(11) NOT NULL AUTO_INCREMENT,
+                id_criterio int(11) NOT NULL,
+                id_opcion int(11) NOT NULL,
+                descripcion text DEFAULT NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY idx_criterio_opcion (id_criterio, id_opcion),
+                KEY id_criterio (id_criterio),
+                KEY id_opcion (id_opcion),
+                CONSTRAINT criterio_opcion_desc_ibfk_1 FOREIGN KEY (id_criterio) REFERENCES criterios (id) ON DELETE CASCADE,
+                CONSTRAINT criterio_opcion_desc_ibfk_2 FOREIGN KEY (id_opcion) REFERENCES opciones_evaluacion (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ";
+        if (!$conn->query($sql)) {
+            error_log('[CriterioOpcionDescTable] Error creando tabla criterio_opcion_descripciones: ' . $conn->error);
+        }
+    }
+}
+
+ensure_opciones_evaluacion_schema($conn);
+ensure_criterio_opcion_descripciones_schema($conn);
+
+if (!function_exists('ensure_escala_notas_curso_schema')) {
+    function ensure_escala_notas_curso_schema(mysqli $conn): void
+    {
+        $sql = "
+            CREATE TABLE IF NOT EXISTS escala_notas_curso (
+                id int(11) NOT NULL AUTO_INCREMENT,
+                id_curso int(11) NOT NULL,
+                puntaje decimal(10,2) NOT NULL,
+                nota decimal(5,2) NOT NULL,
+                orden int(11) NOT NULL DEFAULT 0,
+                PRIMARY KEY (id),
+                UNIQUE KEY idx_curso_puntaje (id_curso, puntaje),
+                KEY id_curso (id_curso),
+                CONSTRAINT escala_notas_curso_ibfk_1 FOREIGN KEY (id_curso) REFERENCES cursos (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ";
+        if (!$conn->query($sql)) {
+            error_log('[EscalaNotasCursoTable] Error creando tabla escala_notas_curso: ' . $conn->error);
+        }
+    }
+}
+
+ensure_escala_notas_curso_schema($conn);
 
 // Función para generar token CSRF
 function generar_csrf_token() {

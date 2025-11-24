@@ -3,34 +3,74 @@ require 'db.php';
 // Esta página es usada por estudiantes y docentes
 verificar_sesion();
 
-if (!isset($_GET['id_equipo']) || !is_numeric($_GET['id_equipo'])) {
-    header("Location: dashboard_estudiante.php"); exit();
-}
-$id_equipo_a_evaluar = $_GET['id_equipo'];
+$id_equipo_a_evaluar = null;
+$id_estudiante_a_evaluar = null;
+$es_evaluacion_individual = false;
+$nombre_item = '';
+$id_curso_item = null;
 
-// Restricción para estudiantes, no para docentes
-if (!$_SESSION['es_docente'] && $id_equipo_a_evaluar == $_SESSION['id_equipo']) {
-    header("Location: dashboard_estudiante.php"); exit();
-}
-
-$stmt = $conn->prepare("SELECT nombre_equipo, id_curso FROM equipos WHERE id = ?");
-$stmt->bind_param("i", $id_equipo_a_evaluar);
-$stmt->execute();
-$equipo = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-
-if (!$equipo) {
-    header("Location: dashboard_estudiante.php?error=" . urlencode("Equipo no encontrado."));
+// Verificar si es una evaluación individual (id_estudiante) o grupal (id_equipo)
+if (isset($_GET['id_estudiante']) && is_numeric($_GET['id_estudiante'])) {
+    // Evaluación individual
+    $es_evaluacion_individual = true;
+    $id_estudiante_a_evaluar = (int)$_GET['id_estudiante'];
+    
+    // Obtener información del estudiante
+    $stmt = $conn->prepare("SELECT nombre, id_curso FROM usuarios WHERE id = ? AND es_docente = 0");
+    $stmt->bind_param("i", $id_estudiante_a_evaluar);
+    $stmt->execute();
+    $estudiante = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    
+    if (!$estudiante) {
+        header("Location: dashboard_estudiante.php?error=" . urlencode("Estudiante no encontrado."));
+        exit();
+    }
+    
+    $nombre_item = $estudiante['nombre'];
+    $id_curso_item = (int)$estudiante['id_curso'];
+    
+    // Para evaluaciones individuales, usar el id del estudiante como id_equipo_evaluado
+    // Esto asegura que cada estudiante tenga su propia evaluación única
+    $id_equipo_a_evaluar = $id_estudiante_a_evaluar;
+    
+    // Restricción para estudiantes, no para docentes
+    if (!$_SESSION['es_docente'] && $id_estudiante_a_evaluar == $_SESSION['id_usuario']) {
+        header("Location: dashboard_estudiante.php"); exit();
+    }
+} elseif (isset($_GET['id_equipo']) && is_numeric($_GET['id_equipo'])) {
+    // Evaluación grupal
+    $id_equipo_a_evaluar = (int)$_GET['id_equipo'];
+    
+    // Restricción para estudiantes, no para docentes
+    if (!$_SESSION['es_docente'] && $id_equipo_a_evaluar == $_SESSION['id_equipo']) {
+        header("Location: dashboard_estudiante.php"); exit();
+    }
+    
+    $stmt = $conn->prepare("SELECT nombre_equipo, id_curso FROM equipos WHERE id = ?");
+    $stmt->bind_param("i", $id_equipo_a_evaluar);
+    $stmt->execute();
+    $equipo = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    
+    if (!$equipo) {
+        header("Location: dashboard_estudiante.php?error=" . urlencode("Equipo no encontrado."));
+        exit();
+    }
+    
+    $nombre_item = $equipo['nombre_equipo'];
+    $id_curso_item = (int)$equipo['id_curso'];
+} else {
+    header("Location: dashboard_estudiante.php?error=" . urlencode("Parámetros inválidos."));
     exit();
 }
 
-$id_curso_equipo = (int)$equipo['id_curso'];
-if (!isset($_SESSION['id_curso_activo']) || $_SESSION['id_curso_activo'] != $id_curso_equipo) {
-    $_SESSION['id_curso_activo'] = $id_curso_equipo;
+if (!isset($_SESSION['id_curso_activo']) || $_SESSION['id_curso_activo'] != $id_curso_item) {
+    $_SESSION['id_curso_activo'] = $id_curso_item;
 }
 
 $stmt_criterios = $conn->prepare("SELECT * FROM criterios WHERE activo = TRUE AND id_curso = ? ORDER BY orden ASC");
-$stmt_criterios->bind_param("i", $id_curso_equipo);
+$stmt_criterios->bind_param("i", $id_curso_item);
 $stmt_criterios->execute();
 $criterios_result = $stmt_criterios->get_result();
 $criterios = [];
@@ -39,8 +79,43 @@ while ($row = $criterios_result->fetch_assoc()) {
 }
 $stmt_criterios->close();
 
-$escala_cualitativa = get_primary_scale($conn, $id_curso_equipo);
-$conceptos_cualitativos = $escala_cualitativa ? get_scale_concepts($conn, (int)$escala_cualitativa['id']) : [];
+// Obtener opciones de evaluación
+$stmt_opciones = $conn->prepare("SELECT * FROM opciones_evaluacion WHERE id_curso = ? ORDER BY orden ASC, puntaje ASC");
+$stmt_opciones->bind_param("i", $id_curso_item);
+$stmt_opciones->execute();
+$opciones_result = $stmt_opciones->get_result();
+$opciones = [];
+while ($row = $opciones_result->fetch_assoc()) {
+    $opciones[] = $row;
+}
+$stmt_opciones->close();
+
+// Obtener descripciones de criterio-opción
+$descripciones = [];
+if (!empty($criterios) && !empty($opciones)) {
+    $ids_criterios = array_column($criterios, 'id');
+    $ids_opciones = array_column($opciones, 'id');
+    if (!empty($ids_criterios) && !empty($ids_opciones)) {
+        $placeholders_c = implode(',', array_fill(0, count($ids_criterios), '?'));
+        $placeholders_o = implode(',', array_fill(0, count($ids_opciones), '?'));
+        $types = str_repeat('i', count($ids_criterios) + count($ids_opciones));
+        $params = array_merge($ids_criterios, $ids_opciones);
+        $stmt_desc = $conn->prepare("
+            SELECT id_criterio, id_opcion, descripcion 
+            FROM criterio_opcion_descripciones 
+            WHERE id_criterio IN ($placeholders_c) AND id_opcion IN ($placeholders_o)
+        ");
+        if ($stmt_desc) {
+            $stmt_desc->bind_param($types, ...$params);
+            $stmt_desc->execute();
+            $desc_result = $stmt_desc->get_result();
+            while ($row = $desc_result->fetch_assoc()) {
+                $descripciones[(int)$row['id_criterio']][(int)$row['id_opcion']] = $row['descripcion'];
+            }
+            $stmt_desc->close();
+        }
+    }
+}
 
 ?>
 <!DOCTYPE html>
@@ -55,96 +130,154 @@ $conceptos_cualitativos = $escala_cualitativa ? get_scale_concepts($conn, (int)$
     <div class="container mt-5">
         <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between mb-4 gap-3">
             <div>
-                <h1 class="mb-1">Evaluando a: <strong><?php echo htmlspecialchars($equipo['nombre_equipo']); ?></strong></h1>
-                <p class="mb-0">Evalúa cada criterio de 1 (deficiente) a 5 (excelente).</p>
+                <h1 class="mb-1">Evaluando a: <strong><?php echo htmlspecialchars($nombre_item); ?></strong></h1>
+                <p class="mb-0">Selecciona la opción que mejor describe el desempeño en cada criterio.</p>
             </div>
-            <a class="btn btn-outline-primary" href="evaluar_cualitativo.php?id_equipo=<?php echo $id_equipo_a_evaluar; ?>">
-                Abrir evaluación cualitativa
-            </a>
         </div>
 
-        <?php if (!empty($conceptos_cualitativos)): ?>
-        <div class="alert alert-secondary mb-4">
-            <h5 class="mb-3">Conceptos cualitativos disponibles</h5>
-            <div class="row g-3">
-                <?php foreach ($conceptos_cualitativos as $concepto): ?>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="p-3 h-100 border rounded" style="border-left: .5rem solid <?php echo htmlspecialchars($concepto['color_hex']); ?>;">
-                            <strong><?php echo htmlspecialchars($concepto['etiqueta']); ?></strong>
-                            <small class="d-block text-muted mt-2">
-                                <?php echo htmlspecialchars($concepto['descripcion'] ?? ''); ?>
-                            </small>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            <small class="text-muted d-block mt-3">Usa estos conceptos como guía al completar la evaluación cualitativa.</small>
-        </div>
-        <?php endif; ?>
-
-        <form action="procesar_evaluacion.php" method="POST">
+        <form action="procesar_evaluacion.php" method="POST" id="evaluacionForm">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
             <input type="hidden" name="id_equipo_evaluado" value="<?php echo $id_equipo_a_evaluar; ?>">
-            <table class="table table-striped table-bordered align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Criterio</th>
-                        <th class="text-center">Puntaje</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($criterios as $criterio): ?>
-                    <tr>
-                        <td style="min-width: 260px;">
-                            <strong><?php echo htmlspecialchars($criterio['descripcion']); ?></strong>
-                            <!-- Descripción opcional -->
-                            <textarea name="descripciones[<?php echo $criterio['id']; ?>]" class="form-control mt-2" rows="2" placeholder="Descripción opcional del puntaje asignado a este criterio"></textarea>
-                            <?php if (!empty($conceptos_cualitativos)): ?>
-                                <div class="mt-3">
-                                    <label class="form-label small text-muted mb-1">Concepto cualitativo (opcional)</label>
-                                    <select name="conceptos_cualitativos[<?php echo $criterio['id']; ?>]" class="form-select form-select-sm">
-                                        <option value="">Selecciona una opción</option>
-                                        <?php foreach ($conceptos_cualitativos as $concepto): ?>
-                                            <option value="<?php echo $concepto['id']; ?>">
-                                                <?php echo htmlspecialchars($concepto['etiqueta']); ?> — <?php echo htmlspecialchars($concepto['descripcion']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <small class="text-muted d-block mt-1">Usa estos conceptos como guía al completar la evaluación cualitativa.</small>
-                                </div>
+            
+            <div class="table-responsive">
+                <table class="table table-bordered rubrica-table">
+                    <thead>
+                        <tr>
+                            <th class="criterio-cell">Criterios</th>
+                            <?php if (empty($opciones)): ?>
+                                <th class="opcion-cell">No hay opciones definidas</th>
+                            <?php else: ?>
+                                <?php foreach ($opciones as $opcion): ?>
+                                    <th class="opcion-cell">
+                                        <div class="fw-bold"><?php echo htmlspecialchars($opcion['nombre']); ?></div>
+                                        <div class="puntaje-header mt-2">
+                                            <small class="text-muted">Puntaje: <?php echo number_format($opcion['puntaje'], 0); ?></small>
+                                        </div>
+                                    </th>
+                                <?php endforeach; ?>
                             <?php endif; ?>
-                        </td>
-                        <td class="text-center">
-                            <?php
-                                $puntaje_maximo = isset($criterio['puntaje_maximo']) ? max(1, (int)$criterio['puntaje_maximo']) : 5;
-                            ?>
-                            <div class="d-flex flex-wrap gap-2 justify-content-center">
-                                <?php for ($i = 1; $i <= $puntaje_maximo; $i++): ?>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="criterios[<?php echo $criterio['id']; ?>]" value="<?php echo $i; ?>" required>
-                                        <label class="form-check-label"><?php echo $i; ?></label>
-                                    </div>
-                                <?php endfor; ?>
-                            </div>
-                            <small class="text-muted d-block mt-2">Selecciona un puntaje de 1 a <?php echo $puntaje_maximo; ?>.</small>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($criterios)): ?>
+                            <tr>
+                                <td colspan="<?php echo max(2, count($opciones) + 1); ?>" class="text-center">
+                                    No hay criterios definidos.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($criterios as $criterio): ?>
+                                <tr>
+                                    <td class="criterio-cell">
+                                        <strong><?php echo htmlspecialchars($criterio['descripcion']); ?></strong>
+                                    </td>
+                                    <?php if (empty($opciones)): ?>
+                                        <td class="text-center text-muted">-</td>
+                                    <?php else: ?>
+                                        <?php foreach ($opciones as $opcion): ?>
+                                            <td class="opcion-cell">
+                                                <?php
+                                                $descripcion = isset($descripciones[$criterio['id']][$opcion['id']]) 
+                                                    ? htmlspecialchars($descripciones[$criterio['id']][$opcion['id']]) 
+                                                    : '';
+                                                ?>
+                                                <button type="button" 
+                                                        class="btn btn-outline-primary w-100 h-100 text-start p-3 descripcion-btn" 
+                                                        data-criterio-id="<?php echo $criterio['id']; ?>"
+                                                        data-opcion-id="<?php echo $opcion['id']; ?>"
+                                                        data-puntaje="<?php echo $opcion['puntaje']; ?>"
+                                                        style="min-height: 100px; white-space: normal; word-wrap: break-word;">
+                                                    <?php if (empty($descripcion)): ?>
+                                                        <span class="text-muted">Sin descripción</span>
+                                                    <?php else: ?>
+                                                        <?php echo $descripcion; ?>
+                                                    <?php endif; ?>
+                                                </button>
+                                                <input type="radio" 
+                                                       name="criterios[<?php echo $criterio['id']; ?>]" 
+                                                       value="<?php echo (int)round($opcion['puntaje']); ?>" 
+                                                       id="criterio_<?php echo $criterio['id']; ?>_opcion_<?php echo $opcion['id']; ?>"
+                                                       class="d-none"
+                                                       required>
+                                            </td>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
             
-            <?php if (!empty($conceptos_cualitativos) && !empty($criterios)): ?>
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <strong>Observaciones cualitativas (opcional)</strong>
-                    </div>
-                    <div class="card-body">
-                        <textarea name="observaciones_cualitativas" class="form-control" rows="3" placeholder="Puedes agregar observaciones generales que acompañen los conceptos seleccionados en cada criterio."></textarea>
-                    </div>
-                </div>
-            <?php endif; ?>
+            <style>
+                .rubrica-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .rubrica-table th,
+                .rubrica-table td {
+                    border: 1px solid #dee2e6;
+                    padding: 8px;
+                    text-align: left;
+                    vertical-align: top;
+                }
+                .rubrica-table th {
+                    background-color: #f8f9fa;
+                    font-weight: bold;
+                    text-align: center;
+                }
+                .rubrica-table .criterio-cell {
+                    min-width: 200px;
+                    font-weight: 500;
+                }
+                .rubrica-table .opcion-cell {
+                    min-width: 150px;
+                    text-align: center;
+                }
+                .rubrica-table .puntaje-header {
+                    font-size: 0.9em;
+                    color: #666;
+                }
+                .descripcion-btn {
+                    transition: all 0.2s;
+                }
+                .descripcion-btn:hover {
+                    background-color: #e7f1ff;
+                    border-color: #0d6efd;
+                }
+                .descripcion-btn.selected {
+                    background-color: #0d6efd;
+                    color: white;
+                    border-color: #0d6efd;
+                }
+            </style>
             
-            <div class="d-grid gap-2"><button type="submit" class="btn btn-primary btn-lg">Enviar Evaluación</button></div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const descripcionBtns = document.querySelectorAll('.descripcion-btn');
+                    descripcionBtns.forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const criterioId = this.getAttribute('data-criterio-id');
+                            const opcionId = this.getAttribute('data-opcion-id');
+                            
+                            // Deseleccionar otros botones del mismo criterio
+                            const otrosBtns = document.querySelectorAll(`.descripcion-btn[data-criterio-id="${criterioId}"]`);
+                            otrosBtns.forEach(b => {
+                                b.classList.remove('selected');
+                                const radio = document.getElementById(`criterio_${criterioId}_opcion_${b.getAttribute('data-opcion-id')}`);
+                                if (radio) radio.checked = false;
+                            });
+                            
+                            // Seleccionar este botón
+                            this.classList.add('selected');
+                            const radio = document.getElementById(`criterio_${criterioId}_opcion_${opcionId}`);
+                            if (radio) radio.checked = true;
+                        });
+                    });
+                });
+            </script>
+            
+            <div class="d-grid gap-2 mt-4"><button type="submit" class="btn btn-primary btn-lg">Enviar Evaluación</button></div>
         </form>
     </div>
 

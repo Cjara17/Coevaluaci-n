@@ -6,17 +6,25 @@ require 'db.php';
 
 // Procesar el formulario POST
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST['email'] ?? '';
+    $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     
-    // Verificar si el usuario existe en la base de datos
-    $stmt = $conn->prepare("SELECT id, nombre, password, id_equipo, es_docente, id_curso FROM usuarios WHERE email = ?");
-    $stmt->bind_param("s", $email);
+    if (empty($email)) {
+        header("Location: index.php?error=Por favor ingrese un correo o usuario");
+        exit();
+    }
+    
+    // Normalizar el email: convertir a minúsculas y eliminar espacios
+    $email_normalizado = strtolower(trim($email));
+    
+    // Verificar si el usuario existe en la base de datos (búsqueda case-insensitive)
+    $stmt = $conn->prepare("SELECT id, nombre, password, id_equipo, es_docente, id_curso, email FROM usuarios WHERE LOWER(TRIM(email)) = ?");
+    $stmt->bind_param("s", $email_normalizado);
     $stmt->execute();
     $resultado = $stmt->get_result();
     
     if ($resultado->num_rows == 0) {
-        header("Location: index.php?error=Correo no encontrado");
+        header("Location: index.php?error=Correo no encontrado: " . htmlspecialchars($email));
         exit();
     }
     

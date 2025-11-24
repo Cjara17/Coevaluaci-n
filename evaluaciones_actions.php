@@ -42,16 +42,59 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bind_param("ssi", $nombre_evaluacion, $tipo_evaluacion, $id_curso_activo);
     
     if ($stmt->execute()) {
+        $id_evaluacion = $stmt->insert_id;
+        $stmt->close();
+        
+        // Establecer rendimiento mínimo al 60% por defecto si no está configurado
+        $stmt_rend = $conn->prepare("UPDATE cursos SET rendimiento_minimo = 60.00 WHERE id = ? AND rendimiento_minimo IS NULL");
+        $stmt_rend->bind_param("i", $id_curso_activo);
+        $stmt_rend->execute();
+        $stmt_rend->close();
+        
+        // Crear 5 criterios por defecto
+        $criterios_defecto = [
+            ['Criterio 1', 1],
+            ['Criterio 2', 2],
+            ['Criterio 3', 3],
+            ['Criterio 4', 4],
+            ['Criterio 5', 5]
+        ];
+        
+        $stmt_criterio = $conn->prepare("INSERT INTO criterios (descripcion, orden, activo, id_curso) VALUES (?, ?, 1, ?)");
+        $ids_criterios = [];
+        foreach ($criterios_defecto as $criterio) {
+            $stmt_criterio->bind_param("sii", $criterio[0], $criterio[1], $id_curso_activo);
+            $stmt_criterio->execute();
+            $ids_criterios[] = $stmt_criterio->insert_id;
+        }
+        $stmt_criterio->close();
+        
+        // Crear 5 opciones por defecto con puntajes 0, 1, 2, 3, 4
+        $opciones_defecto = [
+            ['Opción 1', 0.00, 1],
+            ['Opción 2', 1.00, 2],
+            ['Opción 3', 2.00, 3],
+            ['Opción 4', 3.00, 4],
+            ['Opción 5', 4.00, 5]
+        ];
+        
+        $stmt_opcion = $conn->prepare("INSERT INTO opciones_evaluacion (nombre, puntaje, orden, id_curso) VALUES (?, ?, ?, ?)");
+        foreach ($opciones_defecto as $opcion) {
+            $stmt_opcion->bind_param("sdii", $opcion[0], $opcion[1], $opcion[2], $id_curso_activo);
+            $stmt_opcion->execute();
+        }
+        $stmt_opcion->close();
+        
         // Registrar en log
         $user_id = $_SESSION['id_usuario'];
         $now = date('Y-m-d H:i:s');
-        $detalle = "Creó evaluación: " . $nombre_evaluacion . " (tipo: $tipo_evaluacion) en curso ID $id_curso_activo";
+        $detalle = "Creó evaluación: " . $nombre_evaluacion . " (tipo: $tipo_evaluacion) en curso ID $id_curso_activo con 5 criterios y 5 opciones por defecto";
         $log = $conn->prepare("INSERT INTO logs (id_usuario, accion, detalle, fecha) VALUES (?, 'CREAR', ?, ?)");
         $log->bind_param("iss", $user_id, $detalle, $now);
         $log->execute();
         $log->close();
         
-        header("Location: dashboard_docente.php?status=" . urlencode("Evaluación creada exitosamente."));
+        header("Location: dashboard_docente.php?status=" . urlencode("Evaluación creada exitosamente con criterios y opciones por defecto."));
     } else {
         header("Location: dashboard_docente.php?error=" . urlencode("Error al crear la evaluación: " . $stmt->error));
     }

@@ -23,17 +23,51 @@ verificar_sesion(false); // Solo para estudiantes
 
 $id_usuario_actual = $_SESSION['id_usuario'];
 $id_equipo_usuario = $_SESSION['id_equipo'];
+$id_curso_activo = $_SESSION['id_curso_activo'] ?? null;
 
+// Buscar equipos presentando (evaluaciones grupales)
 $equipo_presentando = null;
-$result_presentando = $conn->query("SELECT id, nombre_equipo FROM equipos WHERE estado_presentacion = 'presentando'");
+$result_presentando = $conn->query("SELECT id, nombre_equipo FROM equipos WHERE estado_presentacion = 'presentando' AND id_curso = " . ($id_curso_activo ?? 0));
 if ($result_presentando->num_rows > 0) {
     $equipo_presentando = $result_presentando->fetch_assoc();
 }
 
+// Buscar estudiantes individuales presentando (evaluaciones individuales)
+$estudiante_presentando = null;
+if ($id_curso_activo) {
+    $stmt_est_presentando = $conn->prepare("SELECT id, nombre FROM usuarios WHERE estado_presentacion_individual = 'presentando' AND id_curso = ? AND es_docente = 0 AND id != ?");
+    $stmt_est_presentando->bind_param("ii", $id_curso_activo, $id_usuario_actual);
+    $stmt_est_presentando->execute();
+    $result_est_presentando = $stmt_est_presentando->get_result();
+    if ($result_est_presentando->num_rows > 0) {
+        $estudiante_presentando = $result_est_presentando->fetch_assoc();
+    }
+    $stmt_est_presentando->close();
+}
+
 $ya_evaluo = false;
-if ($equipo_presentando) {
-    // ***** LA CORRECCIÓN ESTÁ AQUÍ *****
-    // Se cambió 'evaluaciones' por la tabla correcta 'evaluaciones_maestro'
+$id_item_a_evaluar = null;
+$es_individual = false;
+
+if ($estudiante_presentando) {
+    // Es una evaluación individual
+    $es_individual = true;
+    $id_item_a_evaluar = $estudiante_presentando['id'];
+    // Para evaluaciones individuales, usar el id del estudiante directamente como id_equipo_evaluado
+    // Esto asegura que cada estudiante tenga su propia evaluación única
+    $id_equipo_para_evaluar = $id_item_a_evaluar;
+    
+    // Verificar si ya evaluó
+    $stmt = $conn->prepare("SELECT id FROM evaluaciones_maestro WHERE id_evaluador = ? AND id_equipo_evaluado = ?");
+    $stmt->bind_param("ii", $id_usuario_actual, $id_equipo_para_evaluar);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows > 0) {
+        $ya_evaluo = true;
+    }
+    $stmt->close();
+} elseif ($equipo_presentando) {
+    // Es una evaluación grupal
+    $id_item_a_evaluar = $equipo_presentando['id'];
     $stmt = $conn->prepare("SELECT id FROM evaluaciones_maestro WHERE id_evaluador = ? AND id_equipo_evaluado = ?");
     $stmt->bind_param("ii", $id_usuario_actual, $equipo_presentando['id']);
     $stmt->execute();
@@ -68,9 +102,25 @@ if ($equipo_presentando) {
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="card text-center shadow">
-                    <div class="card-header"><h3>Equipo Presentando Ahora</h3></div>
+                    <div class="card-header">
+                        <h3><?php echo $es_individual ? 'Estudiante Presentando Ahora' : 'Equipo Presentando Ahora'; ?></h3>
+                    </div>
                     <div class="card-body p-5">
-                        <?php if ($equipo_presentando): ?>
+                        <?php if ($estudiante_presentando): ?>
+                            <h2 class="display-5"><?php echo htmlspecialchars($estudiante_presentando['nombre']); ?></h2>
+                            
+                            <?php if ($estudiante_presentando['id'] == $id_usuario_actual): ?>
+                                <p class="alert alert-warning mt-4">Eres tú quien está presentando. No puedes evaluarte a ti mismo.</p>
+                            <?php elseif ($ya_evaluo): ?>
+                                <p class="alert alert-success mt-4">¡Gracias! Ya has evaluado a este estudiante.</p>
+                            <?php else: ?>
+                                <?php
+                                // Para evaluaciones individuales, usar id_estudiante directamente
+                                // Esto asegura que cada estudiante tenga su propia evaluación única
+                                ?>
+                                <a href="evaluar.php?id_estudiante=<?php echo $estudiante_presentando['id']; ?>" class="btn btn-success btn-lg mt-4">Evaluar Presentación</a>
+                            <?php endif; ?>
+                        <?php elseif ($equipo_presentando): ?>
                             <h2 class="display-5"><?php echo htmlspecialchars($equipo_presentando['nombre_equipo']); ?></h2>
                             
                             <?php if ($equipo_presentando['id'] == $id_equipo_usuario): ?>
@@ -81,7 +131,7 @@ if ($equipo_presentando) {
                                 <a href="evaluar.php?id_equipo=<?php echo $equipo_presentando['id']; ?>" class="btn btn-success btn-lg mt-4">Evaluar Presentación</a>
                             <?php endif; ?>
                         <?php else: ?>
-                            <p class="alert alert-info">Actualmente no hay ningún equipo presentando. Espera indicaciones del docente.</p>
+                            <p class="alert alert-info">Actualmente no hay ningún equipo o estudiante presentando. Espera indicaciones del docente.</p>
                         <?php endif; ?>
                     </div>
                 </div>
