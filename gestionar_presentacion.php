@@ -29,6 +29,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_equipo']) && isset(
             $nuevo_estado = 'finalizado';
             $mensaje = 'Presentación finalizada con éxito.';
             break;
+        case 'reiniciar':
+            $nuevo_estado = 'pendiente';
+            $mensaje = 'Presentación reiniciada con éxito.';
+            break;
         default:
             // Acción inválida, redirigir sin hacer nada
             header("Location: dashboard_docente.php?error=" . urlencode("Acción inválida."));
@@ -41,13 +45,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_equipo']) && isset(
 
     if ($stmt->execute()) {
         if ($stmt->affected_rows > 0) {
-            header("Location: dashboard_docente.php?status=" . urlencode($mensaje));
+            // Si viene de ver_evaluacion.php, redirigir de vuelta allí
+            $id_evaluacion = isset($_POST['id_evaluacion']) ? (int)$_POST['id_evaluacion'] : null;
+            if ($id_evaluacion) {
+                header("Location: ver_evaluacion.php?id=" . $id_evaluacion . "&status=" . urlencode($mensaje));
+            } else {
+                header("Location: dashboard_docente.php?status=" . urlencode($mensaje));
+            }
         } else {
              // Esto ocurre si el equipo no existe O si no pertenece al curso activo.
-            header("Location: dashboard_docente.php?error=" . urlencode("Error: Equipo no encontrado o no pertenece al curso activo."));
+            $id_evaluacion = isset($_POST['id_evaluacion']) ? (int)$_POST['id_evaluacion'] : null;
+            if ($id_evaluacion) {
+                header("Location: ver_evaluacion.php?id=" . $id_evaluacion . "&error=" . urlencode("Error: Equipo no encontrado o no pertenece al curso activo."));
+            } else {
+                header("Location: dashboard_docente.php?error=" . urlencode("Error: Equipo no encontrado o no pertenece al curso activo."));
+            }
         }
     } else {
-        header("Location: dashboard_docente.php?error=" . urlencode("Error al actualizar el estado: " . $stmt->error));
+        $id_evaluacion = isset($_POST['id_evaluacion']) ? (int)$_POST['id_evaluacion'] : null;
+        if ($id_evaluacion) {
+            header("Location: ver_evaluacion.php?id=" . $id_evaluacion . "&error=" . urlencode("Error al actualizar el estado: " . $stmt->error));
+        } else {
+            header("Location: dashboard_docente.php?error=" . urlencode("Error al actualizar el estado: " . $stmt->error));
+        }
     }
 
     $stmt->close();

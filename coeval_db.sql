@@ -47,6 +47,9 @@ CREATE TABLE `cursos` (
   `nombre_curso` varchar(255) NOT NULL,
   `semestre` varchar(10) NOT NULL COMMENT 'Ej: 2025-1',
   `anio` int(11) NOT NULL,
+  `ponderacion_estudiantes` decimal(5,2) DEFAULT NULL COMMENT 'Ponderación de evaluaciones de estudiantes (0-100)',
+  `usar_ponderacion_unica_invitados` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Si es 1, se usa ponderación única para todos los invitados',
+  `ponderacion_unica_invitados` decimal(5,2) DEFAULT NULL COMMENT 'Ponderación única para el promedio de todas las evaluaciones de invitados (0-100)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_semestre_anio` (`nombre_curso`,`semestre`,`anio`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -77,6 +80,19 @@ CREATE TABLE `docente_curso_log` (
   `fecha_cambio` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_docente_curso` (`id_docente`,`id_curso`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
+-- TABLA: invitado_curso
+-- ========================================
+CREATE TABLE `invitado_curso` (
+  `id_invitado` int(11) NOT NULL,
+  `id_curso` int(11) NOT NULL,
+  `ponderacion` decimal(5,2) NOT NULL DEFAULT 0.00,
+  PRIMARY KEY (`id_invitado`,`id_curso`),
+  KEY `id_curso` (`id_curso`),
+  CONSTRAINT `invitado_curso_ibfk_1` FOREIGN KEY (`id_invitado`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `invitado_curso_ibfk_2` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================

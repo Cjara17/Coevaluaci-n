@@ -1,3 +1,13 @@
+# 📋 RESUMEN EJECUTIVO DE CAMBIOS
+
+## 🎯 Resumen Corto
+
+Se ha implementado un **sistema completo de evaluaciones** que permite crear evaluaciones grupales e individuales, gestionar estudiantes y equipos, y controlar el flujo de presentaciones. El sistema reemplaza la tabla de equipos en el dashboard por una tabla de evaluaciones más flexible, permite seleccionar evaluaciones activas con un simple click, y habilita/deshabilita botones según el contexto. Se agregaron funcionalidades de gestión de equipos (crear, editar, eliminar, asignar estudiantes) y mejoras en los botones de control de presentaciones (iniciar, terminar, reiniciar) tanto para equipos como para estudiantes individuales.
+
+**Script SQL completo disponible en:** `instrucciones.txt`
+
+---
+
 # 📋 RESUMEN DE CAMBIOS - Evaluaciones cualitativas
 
 **Fecha:** 18 de noviembre de 2025  
@@ -242,3 +252,215 @@ Email: estudiante5@alu.uct.cl (sin contraseña)
 **Archivos Modificados:** 8  
 **Archivos Eliminados:** 1 (`upload_escala.php`)  
 **Tabla Eliminada:** 1 (`escala_notas`)
+
+---
+
+# 📋 RESUMEN DE CAMBIOS - Sistema de Evaluaciones y Gestión de Estudiantes/Equipos
+
+**Fecha:** Diciembre 2025  
+**Objetivo:** Implementar sistema de evaluaciones (grupales e individuales), gestión de estudiantes y equipos, y mejoras en la interfaz del dashboard.
+
+---
+
+## ✅ Cambios Completados
+
+### 1. **Sistema de Evaluaciones** ✅
+
+#### Nueva Tabla en Base de Datos:
+- **`evaluaciones`**: Almacena evaluaciones con nombre, tipo (grupal/individual), estado (pendiente/iniciada/cerrada) y curso asociado.
+
+#### Funcionalidades Implementadas:
+- ✅ **Crear evaluación**: Modal con nombre y tipo (grupal/individual)
+- ✅ **Editar evaluación**: Permite modificar nombre y tipo (solo si está pendiente)
+- ✅ **Eliminar evaluación**: Elimina evaluaciones pendientes
+- ✅ **Iniciar evaluación**: Cambia estado a "iniciada" y redirige a la vista de evaluación
+- ✅ **Cerrar evaluación**: Cambia estado a "cerrada"
+- ✅ **Selección de evaluación**: Click en la fila para seleccionar (solo iniciadas/cerradas)
+- ✅ **Resaltado visual**: Fila seleccionada se resalta con color azul y badge "✓ Seleccionada"
+
+#### Archivos Creados:
+- `evaluaciones_actions.php`: Maneja todas las acciones CRUD de evaluaciones
+- `ver_evaluacion.php`: Página que muestra la evaluación iniciada/cerrada con tablas según tipo
+
+#### Archivos Modificados:
+- `dashboard_docente.php`: 
+  - Reemplazada tabla "Equipos del Curso" por "Evaluaciones del Curso"
+  - Agregados modales para crear/editar evaluaciones
+  - Botones "Docentes y ponderaciones" y "Gestionar Criterios" se desactivan si no hay evaluación seleccionada
+  - Sistema de selección de evaluación por click en fila
+- `db.php`: Agregada función `ensure_evaluaciones_schema()` para crear tabla automáticamente
+
+---
+
+### 2. **Página de Visualización de Evaluaciones** ✅
+
+#### `ver_evaluacion.php`:
+- Muestra evaluación iniciada o cerrada
+- **Evaluación Grupal**: Muestra tabla "Equipos del Curso" con todas las columnas y funcionalidades
+- **Evaluación Individual**: Muestra tabla "Estudiantes del Curso" con las mismas columnas y funcionalidades
+- Ambas tablas incluyen:
+  - Estado de presentación
+  - Evaluaciones de estudiantes
+  - Nota docente
+  - Puntaje final
+  - Nota final (1.0-7.0)
+  - Evaluación cualitativa
+  - Acciones (Iniciar/Terminar/Reiniciar presentación, Detalles, etc.)
+
+---
+
+### 3. **Gestión de Estudiantes y Equipos** ✅
+
+#### Nueva Página:
+- `gestionar_estudiantes_equipos.php`: Página completa para gestionar estudiantes y equipos
+
+#### Funcionalidades:
+- ✅ **Vista de dos columnas**: Estudiantes a la izquierda, Equipos a la derecha
+- ✅ **Crear equipo**: Modal con nombre y selección de estudiantes
+- ✅ **Editar equipo**: Modal con nombre y gestión de estudiantes
+  - Lista de estudiantes actuales del equipo con botón "Eliminar"
+  - Tabla de estudiantes disponibles para agregar
+- ✅ **Eliminar equipo**: Elimina equipo y desasigna estudiantes
+- ✅ **Agregar estudiantes a equipo**: Selección múltiple desde modal
+- ✅ **Eliminar estudiantes de equipo**: Botón en lista de estudiantes actuales
+
+#### Archivos Creados:
+- `gestionar_estudiantes_equipos.php`: Página principal de gestión
+- `equipos_actions.php`: Maneja todas las acciones CRUD de equipos y asignación de estudiantes
+
+#### Archivos Modificados:
+- `dashboard_docente.php`: Agregado botón "Estudiantes y Equipos" en la sección de botones
+
+---
+
+### 4. **Mejoras en Botones de Presentación** ✅
+
+#### Funcionalidades Agregadas:
+- ✅ **Botones en tabla de estudiantes**: Agregados "Iniciar Presentación" y "Terminar Presentación" en evaluaciones individuales
+- ✅ **Botón "Reiniciar Presentación"**: Agregado tanto en equipos como en estudiantes
+  - Visible cuando estado es "presentando" o "finalizado"
+  - Cambia estado a "pendiente"
+  - Incluye confirmación antes de ejecutar
+
+#### Archivos Modificados:
+- `gestionar_presentacion.php`: 
+  - Agregada acción "reiniciar" en el switch
+  - Mejorada redirección para mantener contexto de evaluación
+  - Soporte para redirigir a `ver_evaluacion.php` después de acciones
+- `ver_evaluacion.php`: 
+  - Agregados botones de presentación en tabla de estudiantes
+  - Agregado botón "Reiniciar Presentación" en ambas tablas
+  - Agregados mensajes de estado y error
+
+---
+
+### 5. **Reorganización de Botones en Dashboard** ✅
+
+#### Cambios en `dashboard_docente.php`:
+- ✅ Botones "Docentes y ponderaciones", "Gestionar Criterios" y "Conceptos Cualitativos" movidos sobre la tabla de evaluaciones
+- ✅ Alineados a la misma altura del título "Evaluaciones del Curso"
+- ✅ Botones se desactivan si no hay evaluación seleccionada
+- ✅ Tooltips explicativos cuando están deshabilitados
+
+---
+
+## 📊 Cambios en Base de Datos
+
+### Tablas Creadas:
+1. **`evaluaciones`**: Sistema de evaluaciones
+   - Campos: id, nombre_evaluacion, tipo_evaluacion, estado, id_curso, fecha_creacion
+   - Estados: pendiente, iniciada, cerrada
+   - Tipos: grupal, individual
+
+### Script SQL Completo:
+- Ver archivo `instrucciones.txt` para el script SQL completo que incluye:
+  - Ponderaciones de estudiantes e invitados
+  - Tabla de evaluaciones
+  - Todas las tablas y columnas necesarias
+
+---
+
+## 🎯 Flujo de Uso del Sistema
+
+### Para el Docente:
+
+1. **Crear Evaluación**:
+   - Click en "Crear Evaluación"
+   - Ingresar nombre y seleccionar tipo (grupal/individual)
+   - Click en "Crear Evaluación"
+
+2. **Iniciar Evaluación**:
+   - Click en botón "Iniciar" de la evaluación pendiente
+   - Sistema redirige a la vista de evaluación
+
+3. **Seleccionar Evaluación**:
+   - Click en cualquier parte de la fila de una evaluación iniciada/cerrada
+   - La fila se resalta y los botones se activan
+
+4. **Gestionar Equipos y Estudiantes**:
+   - Click en "Estudiantes y Equipos"
+   - Crear/editar/eliminar equipos
+   - Agregar/eliminar estudiantes de equipos
+
+5. **Gestionar Presentaciones**:
+   - Desde la vista de evaluación, usar botones:
+     - "Iniciar Presentación" (estado pendiente)
+     - "Terminar Presentación" (estado presentando)
+     - "Reiniciar Presentación" (estado presentando/finalizado)
+
+---
+
+## 📋 Checklist de Verificación
+
+**Base de Datos:**
+- ✅ Tabla `evaluaciones` creada
+- ✅ Tabla `invitado_curso` creada
+- ✅ Tabla `docente_curso_log` creada
+- ✅ Columnas de ponderaciones agregadas a `cursos`
+
+**Archivos Nuevos:**
+- ✅ `evaluaciones_actions.php`
+- ✅ `ver_evaluacion.php`
+- ✅ `gestionar_estudiantes_equipos.php`
+- ✅ `equipos_actions.php`
+
+**Archivos Modificados:**
+- ✅ `dashboard_docente.php` (sistema de evaluaciones y selección)
+- ✅ `db.php` (función para crear tabla evaluaciones)
+- ✅ `gestionar_presentacion.php` (acción reiniciar y redirección)
+
+**Funcionalidad:**
+- ✅ Crear/editar/eliminar evaluaciones
+- ✅ Iniciar/cerrar evaluaciones
+- ✅ Seleccionar evaluación por click
+- ✅ Ver evaluación con tablas según tipo
+- ✅ Gestionar equipos y estudiantes
+- ✅ Botones de presentación en ambas tablas
+- ✅ Botón reiniciar presentación
+
+---
+
+## 🚀 Instrucciones de Instalación
+
+1. **Ejecutar Script SQL**:
+   - Abrir `instrucciones.txt`
+   - Copiar y ejecutar todo el script en phpMyAdmin o cliente MySQL
+   - Verificar que no haya errores críticos (errores #1060 son normales)
+
+2. **Verificar Tablas**:
+   - Ejecutar: `SHOW TABLES LIKE 'evaluaciones';`
+   - Ejecutar: `DESCRIBE evaluaciones;`
+
+3. **Probar Funcionalidad**:
+   - Crear una evaluación de prueba
+   - Iniciar la evaluación
+   - Seleccionar la evaluación haciendo click en la fila
+   - Verificar que los botones se activen
+
+---
+
+**Estado:** ✅ COMPLETADO  
+**Archivos Nuevos:** 4  
+**Archivos Modificados:** 3  
+**Tablas Nuevas:** 1 (`evaluaciones`)  
+**Script SQL:** Ver `instrucciones.txt`

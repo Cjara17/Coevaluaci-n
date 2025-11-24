@@ -115,6 +115,85 @@ if (!function_exists('ensure_criterios_extended_schema')) {
 
 ensure_criterios_extended_schema($conn);
 
+if (!function_exists('ensure_invitado_curso_schema')) {
+    function ensure_invitado_curso_schema(mysqli $conn): void
+    {
+        $sql = "
+            CREATE TABLE IF NOT EXISTS invitado_curso (
+                id_invitado int(11) NOT NULL,
+                id_curso int(11) NOT NULL,
+                ponderacion decimal(5,2) NOT NULL DEFAULT 0.00,
+                PRIMARY KEY (id_invitado, id_curso),
+                KEY id_curso (id_curso),
+                CONSTRAINT invitado_curso_ibfk_1 FOREIGN KEY (id_invitado) REFERENCES usuarios (id) ON DELETE CASCADE,
+                CONSTRAINT invitado_curso_ibfk_2 FOREIGN KEY (id_curso) REFERENCES cursos (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ";
+        if (!$conn->query($sql)) {
+            error_log('[InvitadoCursoTable] Error creando tabla invitado_curso: ' . $conn->error);
+        }
+    }
+}
+
+if (!function_exists('ensure_cursos_ponderacion_estudiantes')) {
+    function ensure_cursos_ponderacion_estudiantes(mysqli $conn): void
+    {
+        $database = $conn->query("SELECT DATABASE() AS db")->fetch_assoc()['db'];
+        
+        $columnExists = function(string $column) use ($conn, $database): bool {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS total
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'cursos' AND COLUMN_NAME = ?
+            ");
+            $stmt->bind_param("ss", $database, $column);
+            $stmt->execute();
+            $total = (int)$stmt->get_result()->fetch_assoc()['total'];
+            $stmt->close();
+            return $total > 0;
+        };
+        
+        if (!$columnExists('ponderacion_estudiantes')) {
+            $conn->query("ALTER TABLE cursos ADD COLUMN ponderacion_estudiantes decimal(5,2) DEFAULT NULL COMMENT 'Ponderación de evaluaciones de estudiantes (0-100)' AFTER anio");
+        }
+        
+        if (!$columnExists('usar_ponderacion_unica_invitados')) {
+            $conn->query("ALTER TABLE cursos ADD COLUMN usar_ponderacion_unica_invitados tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Si es 1, se usa ponderación única para todos los invitados' AFTER ponderacion_estudiantes");
+        }
+        
+        if (!$columnExists('ponderacion_unica_invitados')) {
+            $conn->query("ALTER TABLE cursos ADD COLUMN ponderacion_unica_invitados decimal(5,2) DEFAULT NULL COMMENT 'Ponderación única para el promedio de todas las evaluaciones de invitados (0-100)' AFTER usar_ponderacion_unica_invitados");
+        }
+    }
+}
+
+ensure_invitado_curso_schema($conn);
+ensure_cursos_ponderacion_estudiantes($conn);
+
+if (!function_exists('ensure_evaluaciones_schema')) {
+    function ensure_evaluaciones_schema(mysqli $conn): void
+    {
+        $sql = "
+            CREATE TABLE IF NOT EXISTS evaluaciones (
+                id int(11) NOT NULL AUTO_INCREMENT,
+                nombre_evaluacion varchar(255) NOT NULL,
+                tipo_evaluacion enum('grupal','individual') NOT NULL,
+                estado enum('pendiente','iniciada','cerrada') NOT NULL DEFAULT 'pendiente',
+                id_curso int(11) NOT NULL,
+                fecha_creacion timestamp NOT NULL DEFAULT current_timestamp(),
+                PRIMARY KEY (id),
+                KEY id_curso (id_curso),
+                CONSTRAINT evaluaciones_ibfk_1 FOREIGN KEY (id_curso) REFERENCES cursos (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ";
+        if (!$conn->query($sql)) {
+            error_log('[EvaluacionesTable] Error creando tabla evaluaciones: ' . $conn->error);
+        }
+    }
+}
+
+ensure_evaluaciones_schema($conn);
+
 // Función para generar token CSRF
 function generar_csrf_token() {
     if (!isset($_SESSION['csrf_token'])) {

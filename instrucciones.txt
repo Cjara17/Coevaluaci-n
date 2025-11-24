@@ -1,0 +1,117 @@
+===========================================
+SCRIPT SQL COMPLETO PARA ACTUALIZAR LA BASE DE DATOS
+===========================================
+
+Este script agrega todas las nuevas funcionalidades implementadas:
+- Ponderaciones para estudiantes e invitados
+- Sistema de evaluaciones (grupales e individuales)
+
+INSTRUCCIONES:
+1. Abre phpMyAdmin o tu cliente MySQL
+2. Selecciona la base de datos 'coeval_db'
+3. Ejecuta este script completo
+4. Si recibes errores #1060 (columna duplicada), ignóralos y continúa
+
+===========================================
+
+-- ========================================
+-- PARTE 1: PONDERACIONES DE ESTUDIANTES E INVITADOS
+-- ========================================
+
+-- Campo 1: Ponderación de estudiantes (si ya existe, ignora el error #1060)
+ALTER TABLE `cursos` 
+ADD COLUMN `ponderacion_estudiantes` decimal(5,2) DEFAULT NULL 
+COMMENT 'Ponderación de evaluaciones de estudiantes (0-100)' 
+AFTER `anio`;
+
+-- Campo 2: Usar ponderación única de invitados (si ya existe, ignora el error #1060)
+ALTER TABLE `cursos` 
+ADD COLUMN `usar_ponderacion_unica_invitados` tinyint(1) NOT NULL DEFAULT 0 
+COMMENT 'Si es 1, se usa ponderación única para todos los invitados' 
+AFTER `ponderacion_estudiantes`;
+
+-- Campo 3: Ponderación única de invitados (si ya existe, ignora el error #1060)
+ALTER TABLE `cursos` 
+ADD COLUMN `ponderacion_unica_invitados` decimal(5,2) DEFAULT NULL 
+COMMENT 'Ponderación única para el promedio de todas las evaluaciones de invitados (0-100)' 
+AFTER `usar_ponderacion_unica_invitados`;
+
+-- Crear tabla docente_curso_log para registrar cambios en ponderaciones de docentes
+CREATE TABLE IF NOT EXISTS `docente_curso_log` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `id_docente` INT(11) NOT NULL,
+  `id_curso` INT(11) NOT NULL,
+  `ponderacion_anterior` DECIMAL(3,2) DEFAULT NULL,
+  `ponderacion_nueva` DECIMAL(3,2) NOT NULL,
+  `id_usuario_accion` INT(11) NOT NULL,
+  `fecha_cambio` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_docente_curso` (`id_docente`,`id_curso`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Crear tabla invitado_curso para manejar ponderaciones de invitados
+CREATE TABLE IF NOT EXISTS `invitado_curso` (
+  `id_invitado` int(11) NOT NULL,
+  `id_curso` int(11) NOT NULL,
+  `ponderacion` decimal(5,2) NOT NULL DEFAULT 0.00,
+  PRIMARY KEY (`id_invitado`,`id_curso`),
+  KEY `id_curso` (`id_curso`),
+  CONSTRAINT `invitado_curso_ibfk_1` FOREIGN KEY (`id_invitado`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `invitado_curso_ibfk_2` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
+-- PARTE 2: SISTEMA DE EVALUACIONES
+-- ========================================
+
+-- Crear tabla evaluaciones para gestionar evaluaciones grupales e individuales
+CREATE TABLE IF NOT EXISTS `evaluaciones` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `nombre_evaluacion` varchar(255) NOT NULL,
+    `tipo_evaluacion` enum('grupal','individual') NOT NULL,
+    `estado` enum('pendiente','iniciada','cerrada') NOT NULL DEFAULT 'pendiente',
+    `id_curso` int(11) NOT NULL,
+    `fecha_creacion` timestamp NOT NULL DEFAULT current_timestamp(),
+    PRIMARY KEY (`id`),
+    KEY `id_curso` (`id_curso`),
+    CONSTRAINT `evaluaciones_ibfk_1` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+===========================================
+NOTAS IMPORTANTES:
+===========================================
+
+1. ERRORES #1060 (Columna duplicada):
+   - Si alguna columna ya existe, el ALTER TABLE fallará con error #1060
+   - Esto es NORMAL - simplemente IGNORA el error y continúa con el siguiente comando
+   - Solo los campos que NO existen se crearán
+
+2. TABLAS CON CREATE TABLE IF NOT EXISTS:
+   - Las tablas se crearán solo si no existen
+   - Si ya existen, el comando se ignorará sin error
+
+3. VERIFICACIÓN POST-EJECUCIÓN:
+   - Verifica que todas las tablas y columnas se hayan creado correctamente
+   - Puedes usar: SHOW TABLES; y DESCRIBE nombre_tabla;
+
+===========================================
+PASOS SI RECIBES ERROR #1060:
+===========================================
+1. Ignora el error del comando que falló
+2. Continúa ejecutando los siguientes comandos del script
+3. Solo los campos que NO existen se crearán
+4. Al final, verifica que todos los campos necesarios estén presentes
+
+===========================================
+VERIFICACIÓN FINAL:
+===========================================
+
+-- Verificar que las columnas se crearon en la tabla cursos
+DESCRIBE cursos;
+
+-- Verificar que las tablas se crearon
+SHOW TABLES LIKE 'docente_curso_log';
+SHOW TABLES LIKE 'invitado_curso';
+SHOW TABLES LIKE 'evaluaciones';
+
+===========================================

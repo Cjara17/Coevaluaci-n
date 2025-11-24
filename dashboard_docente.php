@@ -4,6 +4,12 @@ require_once __DIR__ . '/invite_helpers.php';
 // Requerir ser docente Y tener un curso activo
 verificar_sesion(true);
 
+// Función helper para limpiar nombres de invitados (remover prefijo "invitado")
+function limpiar_nombre_invitado($nombre) {
+    if (empty($nombre)) return $nombre;
+    return preg_replace('/^invitado\s+/i', '', trim($nombre));
+}
+
 $id_curso_activo = isset($_SESSION['id_curso_activo']) ? $_SESSION['id_curso_activo'] : null;
 $id_docente = $_SESSION['id_usuario'];
 
@@ -63,36 +69,128 @@ function obtener_puntaje_docente_ponderado($conn, $id_equipo, $id_curso) {
     }
 }
 
-// 3. OBTENER INFORMACIÓN DE LOS EQUIPOS DEL CURSO ACTIVO
-// Se incluyen subconsultas para calcular el promedio de estudiantes (0-100),
-// la nota del docente ponderada (0-100) y el total de evaluaciones por equipo.
-$sql_equipos = "
+// Función para calcular la evaluación de invitados (con o sin ponderación única)
+function obtener_puntaje_invitados_ponderado($conn, $id_equipo, $id_curso) {
+    // Obtener configuración del curso
+    $stmt_config = $conn->prepare("SELECT usar_ponderacion_unica_invitados, ponderacion_unica_invitados FROM cursos WHERE id = ?");
+    $stmt_config->bind_param("i", $id_curso);
+    $stmt_config->execute();
+    $config = $stmt_config->get_result()->fetch_assoc();
+    $stmt_config->close();
+    
+    $usar_ponderacion_unica = isset($config['usar_ponderacion_unica_invitados']) ? (bool)$config['usar_ponderacion_unica_invitados'] : false;
+    
+    // Obtener todas las evaluaciones de invitados para este equipo
+    $sql_invitados = "
+        SELECT em.puntaje_total
+        FROM evaluaciones_maestro em
+        JOIN usuarios u ON em.id_evaluador = u.id
+        WHERE em.id_equipo_evaluado = ? 
+        AND em.id_curso = ? 
+        AND u.es_docente = FALSE
+        AND u.id_equipo IS NULL
+        AND u.id_curso IS NULL
+    ";
+    $stmt_inv = $conn->prepare($sql_invitados);
+    $stmt_inv->bind_param("ii", $id_equipo, $id_curso);
+    $stmt_inv->execute();
+    $result_inv = $stmt_inv->get_result();
+    
+    $evaluaciones_invitados = [];
+    while ($row = $result_inv->fetch_assoc()) {
+        $evaluaciones_invitados[] = $row['puntaje_total'];
+    }
+    $stmt_inv->close();
+    
+    if (empty($evaluaciones_invitados)) {
+        return null; // No hay evaluaciones de invitados
+    }
+    
+    if ($usar_ponderacion_unica) {
+        // Si usa ponderación única, simplemente promediar todas las evaluaciones
+        $promedio = array_sum($evaluaciones_invitados) / count($evaluaciones_invitados);
+        return $promedio;
+    } else {
+        // Si usa ponderaciones individuales, calcular ponderado
+        $sql_ponderadas = "
+            SELECT em.puntaje_total, ic.ponderacion
+            FROM evaluaciones_maestro em
+            JOIN usuarios u ON em.id_evaluador = u.id
+            JOIN invitado_curso ic ON u.id = ic.id_invitado AND ic.id_curso = em.id_curso
+            WHERE em.id_equipo_evaluado = ? AND em.id_curso = ?
+        ";
+        $stmt_pond = $conn->prepare($sql_ponderadas);
+        $stmt_pond->bind_param("ii", $id_equipo, $id_curso);
+        $stmt_pond->execute();
+        $result_pond = $stmt_pond->get_result();
+        
+        $total_ponderado = 0;
+        $total_ponderacion = 0;
+        
+        while ($row = $result_pond->fetch_assoc()) {
+            $total_ponderado += $row['puntaje_total'] * $row['ponderacion'];
+            $total_ponderacion += $row['ponderacion'];
+        }
+        $stmt_pond->close();
+        
+        if ($total_ponderacion > 0) {
+            return $total_ponderado / $total_ponderacion;
+        } else {
+            return null;
+        }
+    }
+}
+
+// 3. OBTENER INFORMACIÓN DE LAS EVALUACIONES DEL CURSO ACTIVO
+$sql_evaluaciones = "
     SELECT
-        e.id,
-        e.nombre_equipo,
-        e.estado_presentacion,
-        (
-            SELECT AVG(em1.puntaje_total)
-            FROM evaluaciones_maestro em1
-            JOIN usuarios u1 ON em1.id_evaluador = u1.id
-            WHERE em1.id_equipo_evaluado = e.id
-            AND u1.es_docente = FALSE
-        ) as promedio_estudiantes,
-        (
-            SELECT COUNT(em3.id)
-            FROM evaluaciones_maestro em3
-            JOIN usuarios u3 ON em3.id_evaluador = u3.id
-            WHERE em3.id_equipo_evaluado = e.id
-            AND u3.es_docente = FALSE
-        ) as total_eval_estudiantes
-    FROM equipos e
-    WHERE e.id_curso = ?
-    ORDER BY e.nombre_equipo ASC
+        ev.id,
+        ev.nombre_evaluacion,
+        ev.tipo_evaluacion,
+        ev.estado,
+        ev.fecha_creacion
+    FROM evaluaciones ev
+    WHERE ev.id_curso = ?
+    ORDER BY ev.fecha_creacion DESC
 ";
-$stmt_equipos = $conn->prepare($sql_equipos);
-$stmt_equipos->bind_param("i", $id_curso_activo);
-$stmt_equipos->execute();
-$equipos = $stmt_equipos->get_result();
+$stmt_evaluaciones = $conn->prepare($sql_evaluaciones);
+$stmt_evaluaciones->bind_param("i", $id_curso_activo);
+$stmt_evaluaciones->execute();
+$evaluaciones = $stmt_evaluaciones->get_result();
+
+// Verificar si hay alguna evaluación iniciada o cerrada para habilitar botones
+$tiene_evaluacion_activa = false;
+if ($evaluaciones->num_rows > 0) {
+    // Resetear el puntero del resultado para poder iterarlo de nuevo
+    $evaluaciones->data_seek(0);
+    while ($eval = $evaluaciones->fetch_assoc()) {
+        if ($eval['estado'] == 'iniciada' || $eval['estado'] == 'cerrada') {
+            $tiene_evaluacion_activa = true;
+            break;
+        }
+    }
+    // Resetear el puntero nuevamente para usarlo en la tabla
+    $evaluaciones->data_seek(0);
+}
+
+// Obtener la evaluación seleccionada actualmente (guardada en sesión)
+$id_evaluacion_seleccionada = isset($_SESSION['id_evaluacion_seleccionada']) ? (int)$_SESSION['id_evaluacion_seleccionada'] : null;
+
+// Verificar que la evaluación seleccionada pertenezca al curso activo
+if ($id_evaluacion_seleccionada) {
+    $stmt_check_seleccionada = $conn->prepare("SELECT id FROM evaluaciones WHERE id = ? AND id_curso = ?");
+    $stmt_check_seleccionada->bind_param("ii", $id_evaluacion_seleccionada, $id_curso_activo);
+    $stmt_check_seleccionada->execute();
+    if ($stmt_check_seleccionada->get_result()->num_rows === 0) {
+        // La evaluación seleccionada no pertenece a este curso, limpiar la selección
+        unset($_SESSION['id_evaluacion_seleccionada']);
+        $id_evaluacion_seleccionada = null;
+    }
+    $stmt_check_seleccionada->close();
+}
+
+// Verificar si hay una evaluación seleccionada (esto es lo que realmente habilita los botones)
+$tiene_evaluacion_seleccionada = ($id_evaluacion_seleccionada !== null);
 
 $qualitative_feed = get_course_qualitative_feed($conn, $id_curso_activo, 6);
 
@@ -159,14 +257,8 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#resetModal">
                     Resetear Plataforma
                 </button>
-                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#docentesModal">
-                    Docentes y ponderaciones
-                </button>
-                <a href="gestionar_criterios.php" class="btn btn-info">
-                    Gestionar Criterios
-                </a>
-                <a href="gestionar_conceptos.php" class="btn btn-secondary">
-                    Conceptos Cualitativos
+                <a href="gestionar_estudiantes_equipos.php" class="btn btn-primary">
+                    Estudiantes y Equipos
                 </a>
                 <a href="dashboard_privado.php" class="btn btn-dark">Vista privada</a>
             </div>
@@ -309,101 +401,138 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
             </div>
         </div>
 
-        <h2>Equipos del Curso</h2>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="mb-0">Evaluaciones del Curso</h2>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearEvaluacion">
+                    Crear Evaluación
+                </button>
+                <button type="button" class="btn btn-success <?php echo !$tiene_evaluacion_seleccionada ? 'disabled' : ''; ?>" 
+                        data-bs-toggle="modal" data-bs-target="#docentesModal"
+                        <?php echo !$tiene_evaluacion_seleccionada ? 'disabled title="Debes seleccionar una evaluación iniciada o cerrada"' : ''; ?>>
+                    Docentes y ponderaciones
+                </button>
+                <a href="gestionar_criterios.php" class="btn btn-info <?php echo !$tiene_evaluacion_seleccionada ? 'disabled' : ''; ?>"
+                   <?php echo !$tiene_evaluacion_seleccionada ? 'tabindex="-1" aria-disabled="true" onclick="return false;" title="Debes seleccionar una evaluación iniciada o cerrada"' : ''; ?>>
+                    Gestionar Criterios
+                </a>
+                <a href="gestionar_conceptos.php" class="btn btn-secondary">
+                    Conceptos Cualitativos
+                </a>
+            </div>
+        </div>
+        
+        <?php if ($tiene_evaluacion_seleccionada): ?>
+            <?php
+                // Obtener nombre de la evaluación seleccionada
+                $stmt_nombre_seleccionada = $conn->prepare("SELECT nombre_evaluacion FROM evaluaciones WHERE id = ?");
+                $stmt_nombre_seleccionada->bind_param("i", $id_evaluacion_seleccionada);
+                $stmt_nombre_seleccionada->execute();
+                $eval_seleccionada = $stmt_nombre_seleccionada->get_result()->fetch_assoc();
+                $stmt_nombre_seleccionada->close();
+            ?>
+            <div class="alert alert-success mb-3">
+                <strong>✓ Evaluación activa:</strong> <?php echo htmlspecialchars($eval_seleccionada['nombre_evaluacion']); ?>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-warning mb-3">
+                <strong>⚠ Atención:</strong> No hay evaluación seleccionada. Selecciona una evaluación iniciada o cerrada para habilitar las opciones de ponderaciones y criterios.
+            </div>
+        <?php endif; ?>
+        
         <table class="table table-striped table-hover shadow-sm">
             <thead class="table-dark">
                 <tr>
-                    <th>Equipo</th>
+                    <th>Evaluación</th>
+                    <th class="text-center">Tipo</th>
                     <th class="text-center">Estado</th>
-                    <th class="text-center">Eval. Estudiantes</th>
-                    <th class="text-center">Nota Docente (0-100)</th>
-                    <th class="text-center">Puntaje Final (0-100)</th>
-                    <th class="text-center">Nota Final (1.0-7.0)</th>
-                    <th class="text-center">Eval. Cualitativa</th>
+                    <th class="text-center">Fecha Creación</th>
                     <th class="text-center">Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                <?php if ($equipos->num_rows > 0): ?>
-                    <?php while($equipo = $equipos->fetch_assoc()): ?>
-                        <?php
-                            // Calcular puntaje final y nota
-                            $promedio_est = $equipo['promedio_estudiantes']; // Valor de 0 a 100
-                            $nota_doc = obtener_puntaje_docente_ponderado($conn, $equipo['id'], $id_curso_activo); // Valor ponderado de 0 a 100
-                            $puntaje_final_score = null;
-                            $nota_final_grado = 'N/A';
-
-                            $promedio_est_display = ($promedio_est !== null) ? round($promedio_est, 2) : 'N/A';
-                            $nota_doc_display = ($nota_doc !== null) ? round($nota_doc, 2) : 'N/A';
-
-                            // Solo calcular el puntaje final si la presentación ha terminado
-                            if ($equipo['estado_presentacion'] == 'finalizado') {
-                                // Si no hay promedio de estudiantes, asumimos 0 (para no perder la nota docente)
-                                $promedio_est_final = ($promedio_est !== null) ? $promedio_est : 0;
-
-                                if ($nota_doc !== null) {
-                                    // Ponderación 50% estudiantes, 50% docente
-                                    $puntaje_final_score = ($promedio_est_final * 0.5) + ($nota_doc * 0.5);
-                                    $nota_final_grado = calcular_nota_final($puntaje_final_score);
-                                    $puntaje_final_score = number_format($puntaje_final_score, 2, '.', ''); // Formatear para mostrar
-                                } else {
-                                    $puntaje_final_score = 'N/A (Falta Docente)';
-                                }
-                            } else {
-                                $puntaje_final_score = 'Pendiente';
-                            }
-
-                            $qual_summary = get_latest_qualitative_summary($conn, (int)$equipo['id'], $id_curso_activo);
-                            $qual_total = isset($qual_summary['total']) ? (int)$qual_summary['total'] : 0;
-                            $qual_last = (!empty($qual_summary['ultima_fecha'])) ? date("d/m H:i", strtotime($qual_summary['ultima_fecha'])) : null;
-                        ?>
-                    <tr>
-                        <td><strong><?php echo htmlspecialchars($equipo['nombre_equipo']); ?></strong></td>
+                <?php if ($evaluaciones->num_rows > 0): ?>
+                    <?php while($evaluacion = $evaluaciones->fetch_assoc()): ?>
+                    <?php 
+                        $es_seleccionada = ($id_evaluacion_seleccionada && $evaluacion['id'] == $id_evaluacion_seleccionada);
+                        $clase_fila = $es_seleccionada ? 'table-primary fw-bold' : '';
+                        $es_clickeable = ($evaluacion['estado'] == 'iniciada' || $evaluacion['estado'] == 'cerrada');
+                        $cursor_style = $es_clickeable ? 'cursor-pointer' : '';
+                    ?>
+                    <tr class="<?php echo $clase_fila . ' ' . $cursor_style; ?>" 
+                        id="evaluacion_<?php echo $evaluacion['id']; ?>"
+                        <?php if ($es_clickeable): ?>
+                            onclick="seleccionarEvaluacion(<?php echo $evaluacion['id']; ?>)"
+                            style="cursor: pointer;"
+                        <?php endif; ?>
+                        >
+                        <td>
+                            <strong><?php echo htmlspecialchars($evaluacion['nombre_evaluacion']); ?></strong>
+                            <?php if ($es_seleccionada): ?>
+                                <span class="badge bg-success ms-2">✓ Seleccionada</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="text-center">
+                            <?php if ($evaluacion['tipo_evaluacion'] == 'grupal'): ?>
+                                <span class="badge bg-primary">Grupal</span>
+                            <?php else: ?>
+                                <span class="badge bg-info">Individual</span>
+                            <?php endif; ?>
+                        </td>
                         <td class="text-center">
                             <?php 
-                                if ($equipo['estado_presentacion'] == 'presentando') {
-                                    echo '<span class="badge bg-success">Presentando</span>';
-                                } elseif ($equipo['estado_presentacion'] == 'finalizado') {
-                                    echo '<span class="badge bg-secondary">Finalizado</span>';
+                                if ($evaluacion['estado'] == 'iniciada') {
+                                    echo '<span class="badge bg-success">Iniciada</span>';
+                                } elseif ($evaluacion['estado'] == 'cerrada') {
+                                    echo '<span class="badge bg-secondary">Cerrada</span>';
                                 } else {
                                     echo '<span class="badge bg-warning text-dark">Pendiente</span>';
                                 }
                             ?>
                         </td>
-                        <td class="text-center" title="Puntaje promedio estudiantes (0-100): <?php echo $promedio_est_display; ?>">
-                            <?php echo $equipo['total_eval_estudiantes']; ?> (<?php echo $promedio_est_display; ?>)
-                        </td>
-                        <td class="text-center"><?php echo $nota_doc_display; ?></td>
-                        <td class="text-center fw-bold text-primary"><?php echo $puntaje_final_score; ?></td>
-                        <td class="text-center fw-bold text-danger"><?php echo $nota_final_grado; ?></td>
                         <td class="text-center">
-                            <?php if ($qual_total > 0): ?>
-                                <span class="badge bg-success"><?php echo $qual_total; ?> registro<?php echo $qual_total > 1 ? 's' : ''; ?></span>
-                                <div class="small text-muted">Última: <?php echo $qual_last ? $qual_last : 'N/D'; ?></div>
-                            <?php else: ?>
-                                <span class="badge bg-secondary">Sin registros</span>
-                            <?php endif; ?>
+                            <?php echo date("d/m/Y H:i", strtotime($evaluacion['fecha_creacion'])); ?>
                         </td>
                         <td class="text-center">
-                            <form action="gestionar_presentacion.php" method="POST" class="d-inline">
-                                <input type="hidden" name="id_equipo" value="<?php echo $equipo['id']; ?>">
-                                <?php if ($equipo['estado_presentacion'] == 'pendiente'): ?>
-                                    <input type="hidden" name="accion" value="iniciar">
-                                    <button type="submit" class="btn btn-sm btn-primary">Iniciar Presentación</button>
-                                <?php elseif ($equipo['estado_presentacion'] == 'presentando'): ?>
-                                    <input type="hidden" name="accion" value="terminar">
-                                    <button type="submit" class="btn btn-sm btn-success">Terminar Presentación</button>
+                            <div class="btn-group btn-group-sm" role="group" onclick="event.stopPropagation();">
+                                <?php if ($evaluacion['estado'] == 'pendiente'): ?>
+                                    <button type="button" class="btn btn-warning btn-sm" 
+                                            onclick="abrirModalEditarEvaluacion(<?php echo $evaluacion['id']; ?>, '<?php echo htmlspecialchars($evaluacion['nombre_evaluacion'], ENT_QUOTES); ?>', '<?php echo $evaluacion['tipo_evaluacion']; ?>')">
+                                        Editar
+                                    </button>
+                                    <form action="evaluaciones_actions.php" method="POST" class="d-inline">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id_evaluacion" value="<?php echo $evaluacion['id']; ?>">
+                                        <button type="submit" class="btn btn-danger btn-sm" 
+                                                onclick="return confirm('¿Estás seguro de eliminar esta evaluación?')">
+                                            Eliminar
+                                        </button>
+                                    </form>
+                                    <form action="evaluaciones_actions.php" method="POST" class="d-inline">
+                                        <input type="hidden" name="action" value="iniciar">
+                                        <input type="hidden" name="id_evaluacion" value="<?php echo $evaluacion['id']; ?>">
+                                        <button type="submit" class="btn btn-success btn-sm">Iniciar</button>
+                                    </form>
+                                <?php elseif ($evaluacion['estado'] == 'iniciada'): ?>
+                                    <a href="ver_evaluacion.php?id=<?php echo $evaluacion['id']; ?>" class="btn btn-primary btn-sm">Ver Evaluación</a>
+                                    <form action="evaluaciones_actions.php" method="POST" class="d-inline">
+                                        <input type="hidden" name="action" value="cerrar">
+                                        <input type="hidden" name="id_evaluacion" value="<?php echo $evaluacion['id']; ?>">
+                                        <button type="submit" class="btn btn-secondary btn-sm" 
+                                                onclick="return confirm('¿Estás seguro de cerrar esta evaluación?')">
+                                            Cerrar
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <a href="ver_evaluacion.php?id=<?php echo $evaluacion['id']; ?>" class="btn btn-info btn-sm">Ver Resultados</a>
                                 <?php endif; ?>
-                            </form>
-
-                            <a href="ver_detalles.php?id=<?php echo $equipo['id']; ?>" class="btn btn-sm btn-info ms-2">Detalles</a>
-                            <a href="evaluar_cualitativo.php?id_equipo=<?php echo $equipo['id']; ?>" class="btn btn-sm btn-outline-secondary ms-2 mt-2">Eval. cualitativa</a>
+                            </div>
                         </td>
                     </tr>
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="8" class="text-center">No hay equipos registrados para este curso. Sube la lista de estudiantes.</td>
+                        <td colspan="5" class="text-center">No hay evaluaciones creadas. Crea una para comenzar.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
@@ -440,9 +569,9 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                                     <td class="text-center">
                                         <div class="small text-muted">
                                             Evaluador:
-                                            <span class="evaluador-obfus fw-bold" data-name="<?php echo htmlspecialchars($feed['nombre_evaluador']); ?>">•••••••</span>
+                                            <span class="evaluador-obfus fw-bold" data-name="<?php echo htmlspecialchars(limpiar_nombre_invitado($feed['nombre_evaluador'])); ?>">•••••••</span>
                                         </div>
-                                        <button type="button" class="btn btn-link btn-sm toggle-evaluador" data-target-name="<?php echo htmlspecialchars($feed['nombre_evaluador']); ?>">
+                                        <button type="button" class="btn btn-link btn-sm toggle-evaluador" data-target-name="<?php echo htmlspecialchars(limpiar_nombre_invitado($feed['nombre_evaluador'])); ?>">
                                             Mostrar
                                         </button>
                                     </td>
@@ -519,6 +648,8 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                                         ?>
                                         <td>
                                             <strong><?php echo htmlspecialchars($invitado['email']); ?></strong>
+                                            <br>
+                                            <small class="text-muted"><?php echo htmlspecialchars(limpiar_nombre_invitado($invitado['nombre'])); ?></small>
                                             <input type="hidden"
                                                    name="nombre"
                                                    form="<?php echo $form_id; ?>"
@@ -607,18 +738,110 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
         <input type="hidden" name="confirm" value="yes">
     </form>
 
+    <!-- Modal: Crear Evaluación -->
+    <div class="modal fade" id="modalCrearEvaluacion" tabindex="-1" aria-labelledby="modalCrearEvaluacionLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCrearEvaluacionLabel">Crear Nueva Evaluación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="evaluaciones_actions.php" method="POST">
+                    <input type="hidden" name="action" value="create">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="nombre_evaluacion" class="form-label">Nombre de la Evaluación</label>
+                            <input type="text" class="form-control" id="nombre_evaluacion" name="nombre_evaluacion" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="tipo_evaluacion" class="form-label">Tipo de Evaluación</label>
+                            <select class="form-select" id="tipo_evaluacion" name="tipo_evaluacion" required>
+                                <option value="">Seleccione un tipo</option>
+                                <option value="grupal">Grupal</option>
+                                <option value="individual">Individual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Crear Evaluación</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Evaluación -->
+    <div class="modal fade" id="modalEditarEvaluacion" tabindex="-1" aria-labelledby="modalEditarEvaluacionLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEditarEvaluacionLabel">Editar Evaluación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="evaluaciones_actions.php" method="POST">
+                    <input type="hidden" name="action" value="update">
+                    <input type="hidden" name="id_evaluacion" id="edit_id_evaluacion">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="nombre_evaluacion_edit" class="form-label">Nombre de la Evaluación</label>
+                            <input type="text" class="form-control" id="nombre_evaluacion_edit" name="nombre_evaluacion" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="tipo_evaluacion_edit" class="form-label">Tipo de Evaluación</label>
+                            <select class="form-select" id="tipo_evaluacion_edit" name="tipo_evaluacion" required>
+                                <option value="grupal">Grupal</option>
+                                <option value="individual">Individual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Docentes y ponderaciones -->
     <div class="modal fade" id="docentesModal" tabindex="-1" aria-labelledby="docentesModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="docentesModalLabel">Docentes y ponderaciones</h5>
+                    <h5 class="modal-title" id="docentesModalLabel">Ponderaciones de Evaluadores</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="admin_actions.php" method="POST">
                     <div class="modal-body">
                         <input type="hidden" name="action" value="update_docente_weights">
-                        <h6>Docentes actuales del curso</h6>
+                        
+                        <!-- Ponderación de Estudiantes -->
+                        <div class="mb-4">
+                            <h6>Ponderación de Evaluaciones de Estudiantes</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="ponderacion_estudiantes" class="form-label">Ponderación de Estudiantes (%)</label>
+                                    <input type="number" class="form-control ponderacion-input" id="ponderacion_estudiantes" 
+                                           name="ponderacion_estudiantes" 
+                                           value="<?php 
+                                               $stmt_pond_est = $conn->prepare("SELECT ponderacion_estudiantes FROM cursos WHERE id = ?");
+                                               $stmt_pond_est->bind_param("i", $id_curso_activo);
+                                               $stmt_pond_est->execute();
+                                               $result_pond_est = $stmt_pond_est->get_result();
+                                               $pond_est = $result_pond_est->fetch_assoc();
+                                               echo $pond_est ? number_format($pond_est['ponderacion_estudiantes'] ?? 0, 0) : 0;
+                                               $stmt_pond_est->close();
+                                           ?>" 
+                                           min="0" max="100" step="1" required>
+                                    <small class="text-muted">Ponderación para el promedio de todas las evaluaciones de estudiantes.</small>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        
+                        <!-- Docentes -->
+                        <h6>Docentes del curso</h6>
                         <table class="table table-sm">
                             <thead>
                                 <tr>
@@ -646,7 +869,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                                         <td>" . htmlspecialchars($docente['nombre']) . "</td>
                                         <td>" . htmlspecialchars($docente['email']) . "</td>
                                         <td>
-                                            <input type='number' class='form-control form-control-sm ponderacion-input' name='ponderaciones[" . $docente['id'] . "]' value='" . number_format($ponderacion_porcentaje, 0) . "' min='0' max='100' step='1'>
+                                            <input type='number' class='form-control form-control-sm ponderacion-input' name='ponderaciones_docentes[" . $docente['id'] . "]' value='" . number_format($ponderacion_porcentaje, 0) . "' min='0' max='100' step='1'>
                                         </td>
                                     </tr>";
                                 }
@@ -655,6 +878,105 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                             </tbody>
                         </table>
                         <hr>
+                        
+                        <!-- Invitados (se agregan automáticamente) -->
+                        <h6>Invitados del curso</h6>
+                        <?php
+                        // Obtener configuración de ponderación única de invitados
+                        $stmt_config_inv = $conn->prepare("SELECT usar_ponderacion_unica_invitados, ponderacion_unica_invitados FROM cursos WHERE id = ?");
+                        $stmt_config_inv->bind_param("i", $id_curso_activo);
+                        $stmt_config_inv->execute();
+                        $config_inv = $stmt_config_inv->get_result()->fetch_assoc();
+                        $usar_ponderacion_unica = isset($config_inv['usar_ponderacion_unica_invitados']) ? (bool)$config_inv['usar_ponderacion_unica_invitados'] : false;
+                        $ponderacion_unica_valor = isset($config_inv['ponderacion_unica_invitados']) ? $config_inv['ponderacion_unica_invitados'] : 0;
+                        $stmt_config_inv->close();
+                        ?>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="usar_ponderacion_unica_invitados" 
+                                       name="usar_ponderacion_unica_invitados" value="1" 
+                                       <?php echo $usar_ponderacion_unica ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="usar_ponderacion_unica_invitados">
+                                    <strong>Ponderación única</strong>
+                                </label>
+                            </div>
+                            <small class="text-muted d-block ms-4">Si se marca, se promediarán todas las evaluaciones de invitados y se aplicará un único porcentaje al promedio.</small>
+                        </div>
+                        
+                        <div id="ponderacion_unica_container" class="mb-3" style="display: <?php echo $usar_ponderacion_unica ? 'block' : 'none'; ?>;">
+                            <label for="ponderacion_unica_invitados" class="form-label">Ponderación única de invitados (%)</label>
+                            <input type="number" class="form-control ponderacion-input" id="ponderacion_unica_invitados" 
+                                   name="ponderacion_unica_invitados" 
+                                   value="<?php echo number_format($ponderacion_unica_valor, 0); ?>" 
+                                   min="0" max="100" step="1">
+                            <small class="text-muted">Este porcentaje se aplicará al promedio de todas las evaluaciones de invitados.</small>
+                        </div>
+                        
+                        <div id="ponderaciones_individuales_invitados" style="display: <?php echo $usar_ponderacion_unica ? 'none' : 'block'; ?>;">
+                            <?php
+                            // Obtener todos los invitados (es_docente=0, id_equipo IS NULL, id_curso IS NULL)
+                            $sql_invitados_todos = "
+                                SELECT u.id, u.nombre, u.email
+                                FROM usuarios u
+                                WHERE u.es_docente = 0
+                                AND u.id_equipo IS NULL
+                                AND u.id_curso IS NULL
+                                ORDER BY u.nombre ASC
+                            ";
+                            $result_invitados_todos = $conn->query($sql_invitados_todos);
+                            
+                            // Obtener invitados ya asociados al curso
+                            $sql_invitados_curso = "
+                                SELECT ic.id_invitado, ic.ponderacion, u.nombre, u.email
+                                FROM invitado_curso ic
+                                JOIN usuarios u ON ic.id_invitado = u.id
+                                WHERE ic.id_curso = ?
+                                ORDER BY u.nombre ASC
+                            ";
+                            $stmt_invitados_curso = $conn->prepare($sql_invitados_curso);
+                            $stmt_invitados_curso->bind_param("i", $id_curso_activo);
+                            $stmt_invitados_curso->execute();
+                            $invitados_curso = $stmt_invitados_curso->get_result();
+                            $invitados_asociados = [];
+                            while ($inv = $invitados_curso->fetch_assoc()) {
+                                $invitados_asociados[$inv['id_invitado']] = $inv;
+                            }
+                            $stmt_invitados_curso->close();
+                            
+                            // Auto-agregar invitados que no estén en el curso
+                            if ($result_invitados_todos->num_rows > 0) {
+                                echo "<table class='table table-sm'>";
+                                echo "<thead><tr><th>Nombre</th><th>Email</th><th>Ponderación (%)</th></tr></thead>";
+                                echo "<tbody>";
+                                while ($invitado = $result_invitados_todos->fetch_assoc()) {
+                                    $id_inv = $invitado['id'];
+                                    $ponderacion_inv = isset($invitados_asociados[$id_inv]) ? $invitados_asociados[$id_inv]['ponderacion'] * 100 : 0;
+                                    
+                                    // Si no está asociado, agregarlo automáticamente
+                                    if (!isset($invitados_asociados[$id_inv])) {
+                                        $stmt_insert_inv = $conn->prepare("INSERT INTO invitado_curso (id_invitado, id_curso, ponderacion) VALUES (?, ?, 0.00)");
+                                        $stmt_insert_inv->bind_param("ii", $id_inv, $id_curso_activo);
+                                        $stmt_insert_inv->execute();
+                                        $stmt_insert_inv->close();
+                                    }
+                                    
+                                    echo "<tr>
+                                        <td>" . htmlspecialchars(limpiar_nombre_invitado($invitado['nombre'])) . "</td>
+                                        <td>" . htmlspecialchars($invitado['email']) . "</td>
+                                        <td>
+                                            <input type='number' class='form-control form-control-sm ponderacion-input' name='ponderaciones_invitados[" . $id_inv . "]' value='" . number_format($ponderacion_inv, 0) . "' min='0' max='100' step='1'>
+                                        </td>
+                                    </tr>";
+                                }
+                                echo "</tbody></table>";
+                            } else {
+                                echo "<p class='text-muted'>No hay invitados registrados en el sistema.</p>";
+                            }
+                            ?>
+                        </div>
+                        <hr>
+                        
                         <h6>Agregar nuevos docentes</h6>
                         <select name="nuevos_docentes[]" multiple class="form-select">
                             <?php
@@ -681,7 +1003,8 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                         </select>
                         <small class="text-muted">Mantén presionado Ctrl (o Cmd en Mac) para seleccionar múltiples docentes.</small>
                         <hr>
-                        <p>Suma actual: <span id="sumaPonderaciones">0</span>% <span id="estadoPonderaciones"></span></p>
+                        <p><strong>Suma total: <span id="sumaPonderaciones">0</span>% <span id="estadoPonderaciones"></span></strong></p>
+                        <small class="text-muted">La suma de todas las ponderaciones (estudiantes + docentes + invitados) debe ser exactamente 100%.</small>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -735,16 +1058,27 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
 
             // Función para calcular y actualizar la suma de ponderaciones
             function actualizarSumaPonderaciones() {
+                const usarPonderacionUnica = document.getElementById('usar_ponderacion_unica_invitados')?.checked || false;
                 const inputs = document.querySelectorAll('.ponderacion-input');
                 let suma = 0;
+                
                 inputs.forEach(input => {
-                    suma += parseInt(input.value) || 0;
+                    // Si está usando ponderación única, excluir los inputs individuales de invitados
+                    if (usarPonderacionUnica && input.closest('#ponderaciones_individuales_invitados')) {
+                        return; // Saltar este input
+                    }
+                    // Si NO está usando ponderación única, excluir el input de ponderación única
+                    if (!usarPonderacionUnica && input.id === 'ponderacion_unica_invitados') {
+                        return; // Saltar este input
+                    }
+                    suma += parseFloat(input.value) || 0;
                 });
+                
                 const sumaSpan = document.getElementById('sumaPonderaciones');
                 const estadoSpan = document.getElementById('estadoPonderaciones');
                 const submitBtn = document.getElementById('submitBtn');
-                sumaSpan.textContent = suma;
-                if (suma === 100) {
+                sumaSpan.textContent = suma.toFixed(0);
+                if (Math.abs(suma - 100) < 0.5) {
                     estadoSpan.textContent = '(Correcto)';
                     estadoSpan.style.color = 'green';
                     submitBtn.disabled = false;
@@ -757,6 +1091,26 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                     estadoSpan.style.color = 'red';
                     submitBtn.disabled = true;
                 }
+            }
+            
+            // Manejar el checkbox de ponderación única
+            const checkboxPonderacionUnica = document.getElementById('usar_ponderacion_unica_invitados');
+            if (checkboxPonderacionUnica) {
+                checkboxPonderacionUnica.addEventListener('change', function() {
+                    const usarUnica = this.checked;
+                    const containerUnica = document.getElementById('ponderacion_unica_container');
+                    const containerIndividuales = document.getElementById('ponderaciones_individuales_invitados');
+                    
+                    if (containerUnica) {
+                        containerUnica.style.display = usarUnica ? 'block' : 'none';
+                    }
+                    if (containerIndividuales) {
+                        containerIndividuales.style.display = usarUnica ? 'none' : 'block';
+                    }
+                    
+                    // Actualizar suma cuando cambia el modo
+                    actualizarSumaPonderaciones();
+                });
             }
 
             // Event listener para el modal de docentes
@@ -805,6 +1159,37 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 });
             });
         });
+
+        // Función para abrir modal de editar evaluación
+        function abrirModalEditarEvaluacion(id, nombre, tipo) {
+            document.getElementById('edit_id_evaluacion').value = id;
+            document.getElementById('nombre_evaluacion_edit').value = nombre;
+            document.getElementById('tipo_evaluacion_edit').value = tipo;
+            const modal = new bootstrap.Modal(document.getElementById('modalEditarEvaluacion'));
+            modal.show();
+        }
+
+        // Función para seleccionar evaluación al hacer clic en la fila
+        function seleccionarEvaluacion(id) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'evaluaciones_actions.php';
+            
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'seleccionar';
+            form.appendChild(actionInput);
+            
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'id_evaluacion';
+            idInput.value = id;
+            form.appendChild(idInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
     </script>
 </body>
 </html>

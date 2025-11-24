@@ -24,6 +24,12 @@ require 'db.php';
 // Requerir ser docente Y tener un curso activo
 verificar_sesion(true);
 
+// Función helper para limpiar nombres de invitados (remover prefijo "invitado")
+function limpiar_nombre_invitado($nombre) {
+    if (empty($nombre)) return $nombre;
+    return preg_replace('/^invitado\s+/i', '', trim($nombre));
+}
+
 $id_curso_activo = isset($_SESSION['id_curso_activo']) ? $_SESSION['id_curso_activo'] : null;
 
 if (!$id_curso_activo) {
@@ -348,7 +354,7 @@ $stmt_eval_cual->close();
                         <?php foreach ($evaluaciones_detalle as $eval): ?>
                         <?php $qual_match = isset($qualitative_by_evaluator[$eval['id_evaluador']]) ? $qualitative_by_evaluator[$eval['id_evaluador']] : null; ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($eval['nombre_evaluador']); ?></td>
+                            <td><?php echo htmlspecialchars(limpiar_nombre_invitado($eval['nombre_evaluador'])); ?></td>
                             <td class="text-center fw-bold"><?php echo $eval['puntaje_total']; ?></td>
                             <?php foreach ($criterios_map as $id_criterio => $descripcion): ?>
                                 <td class="text-center align-top">
@@ -407,7 +413,7 @@ $stmt_eval_cual->close();
                             <button class="accordion-button <?php echo $index === 0 ? '' : 'collapsed'; ?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<?php echo $collapseId; ?>" aria-expanded="<?php echo $index === 0 ? 'true' : 'false'; ?>" aria-controls="collapse-<?php echo $collapseId; ?>">
                                 <div class="w-100">
                                     <div class="d-flex justify-content-between">
-                                        <span><strong><?php echo htmlspecialchars($eval['nombre_evaluador']); ?></strong></span>
+                                        <span><strong><?php echo htmlspecialchars(limpiar_nombre_invitado($eval['nombre_evaluador'])); ?></strong></span>
                                         <small class="text-muted"><?php echo date("d/m/Y H:i", strtotime($eval['fecha_evaluacion'])); ?></small>
                                     </div>
                                     <small class="text-muted">Observaciones: <?php echo $eval['observaciones'] ? htmlspecialchars(mb_strimwidth($eval['observaciones'], 0, 90, '…', 'UTF-8')) : 'Sin comentarios'; ?></small>
