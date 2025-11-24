@@ -404,6 +404,43 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
             </div>
         </div>
 
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Exportar Evaluaciones y Rúbricas</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <h6>Exportar Evaluaciones</h6>
+                                <p class="text-muted small">Exporta evaluaciones completas con puntajes, notas y comentarios.</p>
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalExportarEvaluaciones" data-export-type="pdf">
+                                    📄 Exportar Evaluaciones (PDF)
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#modalExportarEvaluaciones" data-export-type="csv">
+                                    📋 Exportar Evaluaciones (CSV)
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6>Exportar Rúbricas</h6>
+                                <p class="text-muted small">Exporta la rúbrica de evaluación actual (criterios, opciones y descripciones).</p>
+                                <a href="exportar_rubrica_pdf.php?id_curso=<?php echo $id_curso_activo; ?>" class="btn btn-danger" target="_blank">
+                                    📄 Exportar Rúbrica (PDF)
+                                </a>
+                                <a href="exportar_rubrica_csv.php?id_curso=<?php echo $id_curso_activo; ?>" class="btn btn-secondary">
+                                    📋 Exportar Rúbrica (CSV)
+                                </a>
+                                <a href="exportar_rubrica.php?id_curso=<?php echo $id_curso_activo; ?>" class="btn btn-primary">
+                                    📊 Exportar Rúbrica (Excel)
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="mb-0">Evaluaciones del Curso</h2>
             <div class="d-flex gap-2">
@@ -807,6 +844,80 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
         </div>
     </div>
 
+    <!-- Modal: Exportar Evaluaciones -->
+    <div class="modal fade" id="modalExportarEvaluaciones" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Exportar Evaluaciones</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formExportarEvaluaciones" method="GET">
+                    <input type="hidden" name="id_curso" value="<?php echo $id_curso_activo; ?>">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="filtro_equipo" class="form-label">Filtrar por Equipo (opcional)</label>
+                            <select class="form-select" name="id_equipo" id="filtro_equipo">
+                                <option value="">Todos los equipos/estudiantes</option>
+                                <?php
+                                // Obtener equipos del curso
+                                $stmt_equipos = $conn->prepare("SELECT id, nombre_equipo FROM equipos WHERE id_curso = ? ORDER BY nombre_equipo ASC");
+                                $stmt_equipos->bind_param("i", $id_curso_activo);
+                                $stmt_equipos->execute();
+                                $equipos_result = $stmt_equipos->get_result();
+                                while ($equipo = $equipos_result->fetch_assoc()) {
+                                    echo '<option value="' . $equipo['id'] . '">' . htmlspecialchars($equipo['nombre_equipo']) . '</option>';
+                                }
+                                $stmt_equipos->close();
+                                
+                                // Obtener estudiantes individuales (sin equipo)
+                                $stmt_estudiantes = $conn->prepare("
+                                    SELECT DISTINCT u.id, u.nombre, u.email
+                                    FROM usuarios u
+                                    JOIN evaluaciones_maestro em ON em.id_equipo_evaluado = u.id
+                                    WHERE u.es_docente = 0 
+                                    AND u.id_equipo IS NULL
+                                    AND em.id_curso = ?
+                                    ORDER BY u.nombre ASC
+                                ");
+                                $stmt_estudiantes->bind_param("i", $id_curso_activo);
+                                $stmt_estudiantes->execute();
+                                $estudiantes_result = $stmt_estudiantes->get_result();
+                                while ($estudiante = $estudiantes_result->fetch_assoc()) {
+                                    echo '<option value="' . $estudiante['id'] . '">' . htmlspecialchars($estudiante['nombre'] . ' (' . $estudiante['email'] . ')') . '</option>';
+                                }
+                                $stmt_estudiantes->close();
+                                ?>
+                            </select>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="fecha_desde" class="form-label">Fecha Desde (opcional)</label>
+                                <input type="date" class="form-control" name="fecha_desde" id="fecha_desde">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="fecha_hasta" class="form-label">Fecha Hasta (opcional)</label>
+                                <input type="date" class="form-control" name="fecha_hasta" id="fecha_hasta">
+                            </div>
+                        </div>
+                        <div class="alert alert-info">
+                            <small>Si no seleccionas ningún filtro, se exportarán todas las evaluaciones del curso.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger" id="btnExportarPDF" formaction="exportar_evaluaciones_pdf.php" target="_blank">
+                            Exportar PDF
+                        </button>
+                        <button type="submit" class="btn btn-secondary" id="btnExportarCSV" formaction="exportar_evaluaciones_csv.php">
+                            Exportar CSV
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Docentes y ponderaciones -->
     <div class="modal fade" id="docentesModal" tabindex="-1" aria-labelledby="docentesModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl">
@@ -1127,6 +1238,25 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 if (e.target.classList.contains('ponderacion-input')) {
                     actualizarSumaPonderaciones();
                 }
+            });
+
+            // Manejar el modal de exportar evaluaciones
+            const modalExportar = document.getElementById('modalExportarEvaluaciones');
+            const btnExportarPDF = document.getElementById('btnExportarPDF');
+            const btnExportarCSV = document.getElementById('btnExportarCSV');
+            
+            // Detectar qué botón abrió el modal
+            document.querySelectorAll('[data-bs-target="#modalExportarEvaluaciones"]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const exportType = this.getAttribute('data-export-type');
+                    if (exportType === 'pdf') {
+                        btnExportarPDF.style.display = 'inline-block';
+                        btnExportarCSV.style.display = 'none';
+                    } else if (exportType === 'csv') {
+                        btnExportarPDF.style.display = 'none';
+                        btnExportarCSV.style.display = 'inline-block';
+                    }
+                });
             });
 
             document.querySelectorAll('.toggle-evaluador').forEach(function(btn) {

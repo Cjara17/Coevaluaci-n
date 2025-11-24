@@ -209,6 +209,7 @@ if ($necesita_regenerar && $puntaje_total_maximo > 0) {
 
 $status_message = isset($_GET['status']) ? htmlspecialchars($_GET['status']) : '';
 $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
+$success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success']) : '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -323,6 +324,12 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
+        <?php if ($success_message): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <?php echo $success_message; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
 
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h3>Rúbrica de Evaluación</h3>
@@ -339,6 +346,15 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                 <a href="exportar_rubrica.php?id_curso=<?php echo $id_curso_activo; ?>" class="btn btn-primary">
                     📊 Exportar a Excel
                 </a>
+                <a href="exportar_rubrica_pdf.php?id_curso=<?php echo $id_curso_activo; ?>" class="btn btn-danger" target="_blank">
+                    📄 Exportar a PDF
+                </a>
+                <a href="exportar_rubrica_csv.php?id_curso=<?php echo $id_curso_activo; ?>" class="btn btn-secondary">
+                    📋 Exportar a CSV
+                </a>
+                <button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalImportarRubrica">
+                    📥 Importar desde CSV
+                </button>
             </div>
         </div>
 
@@ -578,6 +594,42 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
         </div>
     </div>
 
+    <!-- Modal Importar Rúbrica -->
+    <div class="modal fade" id="modalImportarRubrica" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Importar Rúbrica desde CSV</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="importar_rubrica.php" method="POST" enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <strong>Formato esperado del CSV:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Primera columna: Criterios</li>
+                                <li>Siguientes columnas: Opciones con formato "Nombre (Puntaje: X.XX)"</li>
+                                <li>Las filas después de los encabezados contienen los criterios y sus descripciones</li>
+                            </ul>
+                            <p class="mb-0 mt-2"><small>Puedes exportar primero una rúbrica para ver el formato exacto.</small></p>
+                        </div>
+                        <div class="mb-3">
+                            <label for="archivo_csv" class="form-label">Seleccionar archivo CSV</label>
+                            <input type="file" class="form-control" name="archivo_csv" id="archivo_csv" accept=".csv" required>
+                            <small class="text-muted">Solo archivos .csv</small>
+                        </div>
+                        <div class="alert alert-warning">
+                            <strong>⚠️ Advertencia:</strong> La importación reemplazará los criterios y opciones actuales. Los elementos existentes se marcarán como inactivos si no están en el archivo CSV.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Importar Rúbrica</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
