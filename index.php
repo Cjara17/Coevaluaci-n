@@ -45,8 +45,8 @@
 
                         <form action="login.php" method="POST">
                             <div class="mb-3">
-                                <label for="email" class="form-label">Correo institucional o usuario</label>
-                                <input type="text" class="form-control" id="email" name="email" required placeholder="usuario@alu.uct.cl o nicolashuenchullancheuquelaf.voum9">
+                                <label for="email" class="form-label">Correo institucional</label>
+                                <input type="text" class="form-control" id="email" name="email" required placeholder="usuario@alu.uct.cl o docente@uct.cl">
                             </div>
 
                             <div class="mb-3 hidden-element" id="password-field">
