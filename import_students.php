@@ -77,42 +77,52 @@ if ($ext === 'csv') {
     $conn->begin_transaction();
     try {
         $row = 0;
-        $first = fgetcsv($handle, 10000, ",");
+
+        // Conversión automática CSV con punto y coma → comas
+        // Detectar delimitador automáticamente (coma o punto y coma)
+        $first_line = fgets($handle);
+        if ($first_line === FALSE) {
+            throw new Exception('CSV vacío o inválido');
+        }
+        rewind($handle); // Volver al inicio del archivo
+
+        $delimiter = ',';
+        $first_comma = str_getcsv($first_line, ',');
+        $expected_header = ['ID', 'Nombre', 'Email'];
+        $actual_header_comma = array_map('trim', $first_comma);
+        if (count($actual_header_comma) >= 3 && array_slice($actual_header_comma, 0, 3) === $expected_header) {
+            $delimiter = ',';
+        } else {
+            $first_semicolon = str_getcsv($first_line, ';');
+            $actual_header_semicolon = array_map('trim', $first_semicolon);
+            if (count($actual_header_semicolon) >= 3 && array_slice($actual_header_semicolon, 0, 3) === $expected_header) {
+                $delimiter = ';';
+            } else {
+                throw new Exception('El formato del CSV debe tener la cabecera exacta: ID,Nombre,Email (con coma o punto y coma como separador)');
+            }
+        }
+
+        // Normalización de encabezado antes de validar
+        $first = fgetcsv($handle, 10000, $delimiter);
         if ($first === FALSE) {
             throw new Exception('CSV vacío o inválido');
         }
         $row++;
 
-        $header_map = [];
-        $is_header = false;
-        $h0 = isset($first[0]) ? strtolower(trim($first[0])) : '';
-        $h1 = isset($first[1]) ? strtolower(trim($first[1])) : '';
-        $h2 = isset($first[2]) ? strtolower(trim($first[2])) : '';
-        if (str_contains($h0, 'id') || str_contains($h0, 'codigo') || str_contains($h0, 'rut') || str_contains($h0, 'student')) {
-            $is_header = true;
+        // Enforce strict header format: ID,Nombre,Email (después de normalización)
+        $actual_header = array_map('trim', $first);
+        if (count($actual_header) < 3 || array_slice($actual_header, 0, 3) !== $expected_header) {
+            throw new Exception('El formato del CSV debe tener la cabecera exacta: ID,Nombre,Email');
         }
-        if (str_contains($h1, 'nombre') || str_contains($h1, 'name')) $is_header = true;
-        if (str_contains($h2, 'email') || str_contains($h2, 'correo')) $is_header = true;
 
-        if ($is_header) {
-            foreach ($first as $idx => $cell) {
-                $c = strtolower(trim($cell));
-                if (str_contains($c, 'id') || str_contains($c, 'codigo') || str_contains($c, 'rut') || str_contains($c, 'student')) $header_map['id'] = $idx;
-                if (str_contains($c, 'nombre') || str_contains($c, 'name')) $header_map['name'] = $idx;
-                if (str_contains($c, 'email') || str_contains($c, 'correo')) $header_map['email'] = $idx;
-            }
-        } else {
-            $header_map = ['id' => 0, 'name' => 1, 'email' => 2];
-            rewind($handle);
-            $row = 0;
-        }
+        $header_map = ['id' => 0, 'name' => 1, 'email' => 2];
 
         $stmt_select_by_studentid = $conn->prepare("SELECT id, nombre, email FROM usuarios WHERE student_id = ? LIMIT 1");
         $stmt_select_by_email = $conn->prepare("SELECT id, nombre, student_id FROM usuarios WHERE email = ? LIMIT 1");
         $stmt_insert = $conn->prepare("INSERT INTO usuarios (nombre, email, student_id, es_docente, id_curso) VALUES (?, ?, ?, 0, ?)");
         $stmt_update = $conn->prepare("UPDATE usuarios SET nombre = ?, email = ?, student_id = ?, id_curso = ? WHERE id = ?");
 
-        while (($data = fgetcsv($handle, 10000, ",")) !== FALSE) {
+        while (($data = fgetcsv($handle, 10000, $delimiter)) !== FALSE) {
             $row++;
             if (!array_filter($data)) continue;
 
@@ -200,31 +210,21 @@ if ($ext === 'csv') {
         $stmt_update = $conn->prepare("UPDATE usuarios SET nombre = ?, email = ?, student_id = ?, id_curso = ? WHERE id = ?");
 
         $row = 0;
-        $header_map = [];
-        $is_header = false;
+        $header_map = ['id' => 0, 'name' => 1, 'email' => 2];
+
+        // Enforce strict header format: ID,Nombre,Email for XLSX
+        if (!empty($rows)) {
+            $first_row = $rows[0];
+            $expected_header = ['ID', 'Nombre', 'Email'];
+            $actual_header = array_map(function($cell) { return trim((string)$cell); }, $first_row);
+            if (count($actual_header) < 3 || array_slice($actual_header, 0, 3) !== $expected_header) {
+                throw new Exception('El formato del XLSX debe tener la cabecera exacta: ID,Nombre,Email');
+            }
+            array_shift($rows); // Remove header row
+        }
 
         foreach ($rows as $data) {
             $row++;
-            if ($row == 1) {
-                $h0 = isset($data[0]) ? strtolower(trim((string)$data[0])) : '';
-                $h1 = isset($data[1]) ? strtolower(trim((string)$data[1])) : '';
-                $h2 = isset($data[2]) ? strtolower(trim((string)$data[2])) : '';
-                if (str_contains($h0, 'id') || str_contains($h0, 'codigo') || str_contains($h0, 'rut') || str_contains($h0, 'student')) $is_header = true;
-                if (str_contains($h1, 'nombre') || str_contains($h1, 'name')) $is_header = true;
-                if (str_contains($h2, 'email') || str_contains($h2, 'correo')) $is_header = true;
-
-                if ($is_header) {
-                    foreach ($data as $idx => $cell) {
-                        $c = strtolower(trim((string)$cell));
-                        if (str_contains($c, 'id') || str_contains($c, 'codigo') || str_contains($c, 'rut') || str_contains($c, 'student')) $header_map['id'] = $idx;
-                        if (str_contains($c, 'nombre') || str_contains($c, 'name')) $header_map['name'] = $idx;
-                        if (str_contains($c, 'email') || str_contains($c, 'correo')) $header_map['email'] = $idx;
-                    }
-                    continue;
-                } else {
-                    $header_map = ['id' => 0, 'name' => 1, 'email' => 2];
-                }
-            }
 
             $id_val = isset($data[$header_map['id']]) ? trim((string)$data[$header_map['id']]) : '';
             $name = isset($data[$header_map['name']]) ? trim((string)$data[$header_map['name']]) : '';

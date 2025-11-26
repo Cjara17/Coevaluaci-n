@@ -368,6 +368,18 @@ function generar_csrf_token() {
     return $_SESSION['csrf_token'];
 }
 
+// Función para verificar si hay evaluaciones iniciadas en un curso
+function hayEvaluacionesIniciadas($cursoId) {
+    global $conn;
+    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM evaluaciones_maestro WHERE id_curso = ? AND inicio_temporizador IS NOT NULL");
+    $stmt->bind_param("i", $cursoId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $total = $result->fetch_assoc()['total'];
+    $stmt->close();
+    return $total > 0;
+}
+
 // Función para redirigir si el usuario no está logueado
 function verificar_sesion($solo_docentes = false) {
     if (!isset($_SESSION['id_usuario'])) {

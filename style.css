@@ -109,3 +109,26 @@ body.silueta {
     padding: 0.75rem;
   }
 }
+
+.timer-box {
+    font-size: 1.2rem;
+    font-weight: bold;
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: 2px solid #ccc;
+    width: fit-content;
+    margin-bottom: 15px;
+    background-color: #f5f5f5;
+}
+
+.timer-green {
+    color: green;
+}
+
+.timer-yellow {
+    color: #c9a200;
+}
+
+.timer-red {
+    color: red;
+}

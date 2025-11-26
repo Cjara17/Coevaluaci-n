@@ -372,6 +372,47 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
         }
         exit();
     }
+
+    // --- NUEVA ACCIÓN: ACTUALIZAR DURACIÓN DEL TEMPORIZADOR ---
+    elseif ($action === 'update_timer_duration') {
+        if (!$id_curso_activo) {
+            header("Location: dashboard_docente.php?error=" . urlencode("Curso activo no disponible."));
+            exit();
+        }
+
+        // Verificar si hay evaluaciones iniciadas (SUBTAREA 6)
+        if (hayEvaluacionesIniciadas($id_curso_activo)) {
+            header("Location: dashboard_docente.php?error=" . urlencode("No se puede modificar la duración del temporizador porque ya hay evaluaciones iniciadas en este curso."));
+            exit();
+        }
+
+        $duracion_minutos = isset($_POST['duracion_minutos']) ? (int)$_POST['duracion_minutos'] : null;
+
+        // Validar duración
+        if ($duracion_minutos !== null && ($duracion_minutos < 1 || $duracion_minutos > 300)) {
+            header("Location: dashboard_docente.php?error=" . urlencode("La duración debe estar entre 1 y 300 minutos."));
+            exit();
+        }
+
+        // Actualizar en la base de datos
+        $stmt = $conn->prepare("UPDATE cursos SET duracion_minutos = ? WHERE id = ?");
+        $stmt->bind_param("ii", $duracion_minutos, $id_curso_activo);
+        if ($stmt->execute()) {
+            $user_id = $_SESSION['id_usuario'];
+            $now = date('Y-m-d H:i:s');
+            $detalle = "Actualizada duración del temporizador a " . ($duracion_minutos ? $duracion_minutos . " minutos" : "sin límite") . " para el curso ID $id_curso_activo";
+            $log_stmt = $conn->prepare("INSERT INTO logs (id_usuario, accion, detalle, fecha) VALUES (?, 'ACTUALIZAR', ?, ?)");
+            $log_stmt->bind_param("iss", $user_id, $detalle, $now);
+            $log_stmt->execute();
+            $log_stmt->close();
+
+            header("Location: dashboard_docente.php?status=" . urlencode("Duración del temporizador actualizada exitosamente."));
+        } else {
+            header("Location: dashboard_docente.php?error=" . urlencode("Error al actualizar la duración: " . $stmt->error));
+        }
+        $stmt->close();
+        exit();
+    }
 }
 
 header("Location: dashboard_docente.php");

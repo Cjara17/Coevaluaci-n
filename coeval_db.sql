@@ -1,4 +1,4 @@
--- phpMyAdmin SQL Dump
+-- phpMyAdmin SQL Dump 
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
@@ -50,6 +50,7 @@ CREATE TABLE `cursos` (
   `ponderacion_estudiantes` decimal(5,2) DEFAULT NULL COMMENT 'Ponderación de evaluaciones de estudiantes (0-100)',
   `usar_ponderacion_unica_invitados` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Si es 1, se usa ponderación única para todos los invitados',
   `ponderacion_unica_invitados` decimal(5,2) DEFAULT NULL COMMENT 'Ponderación única para el promedio de todas las evaluaciones de invitados (0-100)',
+  `duracion_minutos` int(11) DEFAULT NULL COMMENT 'Duración en minutos para las evaluaciones de estudiantes',
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_semestre_anio` (`nombre_curso`,`semestre`,`anio`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -150,6 +151,9 @@ CREATE TABLE `evaluaciones_maestro` (
   `puntaje_total` int(11) NOT NULL,
   `fecha_evaluacion` timestamp NULL DEFAULT current_timestamp(),
   `id_curso` int(11) NOT NULL,
+  `inicio_temporizador` datetime DEFAULT NULL COMMENT 'Timestamp de inicio del temporizador',
+  `fin_temporizador` datetime DEFAULT NULL COMMENT 'Timestamp de fin del temporizador',
+  `finalizado_por_tiempo` tinyint(1) DEFAULT 0 COMMENT 'Indica si la evaluación fue finalizada automáticamente por tiempo',
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_evaluador_equipo_curso` (`id_evaluador`,`id_equipo_evaluado`,`id_curso`),
   KEY `id_equipo_evaluado` (`id_equipo_evaluado`),
@@ -164,10 +168,8 @@ CREATE TABLE `evaluaciones_detalle` (
   `id_evaluacion` int(11) NOT NULL,
   `id_criterio` int(11) NOT NULL,
   `puntaje` int(11) NOT NULL,
-
   -- ✔ Nuevo campo agregado para descripciones de evaluaciones numéricas
   `numerical_details` TEXT NULL,
-
   PRIMARY KEY (`id`),
   KEY `id_evaluacion` (`id_evaluacion`),
   KEY `id_criterio` (`id_criterio`)
@@ -236,10 +238,8 @@ CREATE TABLE `evaluaciones_cualitativas_detalle` (
   `id_criterio` int(11) NOT NULL,
   `id_concepto` int(11) NOT NULL,
   `ponderacion_aplicada` decimal(5,2) DEFAULT NULL,
-
   -- ✔ Nuevo campo para describir el concepto cualitativo elegido
   `qualitative_details` TEXT NULL,
-
   PRIMARY KEY (`id`),
   KEY `idx_det_eval` (`id_evaluacion`),
   KEY `idx_det_criterio` (`id_criterio`),
@@ -266,11 +266,9 @@ CREATE TABLE `logs` (
       ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-
 -- ========================================
 -- DATOS DE PRUEBA
 -- ========================================
-
 INSERT INTO `usuarios` (`nombre`, `email`, `es_docente`, `password`)
 VALUES ('Docente Prueba', 'docente@uct.cl', 1, '$2y$10$5RFvZl7w.zP5YL7KDH.cTu0Jq6kU4kDH8Qj4qK3L9Q2M6N7O8P9Q');
 
@@ -286,9 +284,8 @@ VALUES ('Equipo A', 'pendiente', 1);
 INSERT INTO `criterios` (`descripcion`, `orden`, `activo`, `id_curso`) 
 VALUES ('Presentación', 1, 1, 1);
 
-
 COMMIT;
 
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_SELF */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

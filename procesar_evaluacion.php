@@ -21,6 +21,7 @@
  * @return void Redirige a páginas de éxito o error según el resultado del procesamiento.
  */
 require 'db.php';
+require 'timeout_helpers.php';
 // Requerir sesión activa, no importa si es docente o estudiante, ambos pueden evaluar.
 // Si no hay id_curso_activo en sesión, lo inferiremos desde el equipo evaluado.
 if (!isset($_SESSION['id_usuario'])) {
@@ -38,6 +39,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     $id_evaluador = $_SESSION['id_usuario'];
     $id_equipo_evaluado = (int)$_POST['id_equipo_evaluado'];
+
+    // Obtener duración del curso para calcular fin_temporizador
+    $stmt_duracion = $conn->prepare("SELECT duracion_minutos FROM cursos WHERE id = ?");
+    $stmt_duracion->bind_param("i", $id_curso_activo);
+    $stmt_duracion->execute();
+    $duracion_result = $stmt_duracion->get_result();
+    $duracion_minutos = $duracion_result->fetch_assoc()['duracion_minutos'] ?? null;
+    $stmt_duracion->close();
     
     // Obtener o inferir el ID del curso activo
     if (isset($_SESSION['id_curso_activo'])) {
@@ -139,7 +148,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
     $observaciones_cualitativas = isset($_POST['observaciones_cualitativas']) ? trim($_POST['observaciones_cualitativas']) : null;
-    
+
+    // ----------------------------------------------------------------------
+    // VERIFICACIÓN DE TIMEOUT ANTES DE PROCESAR
+    // ----------------------------------------------------------------------
+    // Obtener ID de evaluación existente para verificar timeout
+    $stmt_get_eval = $conn->prepare("SELECT id FROM evaluaciones_maestro WHERE id_evaluador = ? AND id_equipo_evaluado = ? AND id_curso = ?");
+    $stmt_get_eval->bind_param("iii", $id_evaluador, $id_equipo_evaluado, $id_curso_activo);
+    $stmt_get_eval->execute();
+    $eval_result = $stmt_get_eval->get_result();
+    $id_evaluacion = null;
+    if ($eval_result->num_rows > 0) {
+        $id_evaluacion = (int)$eval_result->fetch_assoc()['id'];
+    }
+    $stmt_get_eval->close();
+
+    if ($id_evaluacion) {
+        $timeout_info = verificar_timeout($conn, $id_evaluacion);
+        if ($timeout_info['expirado']) {
+            // Lógica de finalización de coevaluación
+            // Guardado forzado al expirar
+            $datos_para_guardar = [
+                'criterios' => $puntajes,
+                'descripciones' => $descripciones
+            ];
+            guardar_automatico_por_timeout($conn, $id_evaluacion, $datos_para_guardar);
+
+            // Redirigir a página de tiempo agotado
+            header("Location: tiempo_agotado.php?msg=" . urlencode("El tiempo para esta evaluación ha expirado. Tus respuestas han sido guardadas automáticamente."));
+            exit();
+        }
+    }
+
     // Iniciar transacción para asegurar la integridad de maestro y detalle
     $conn->begin_transaction();
     
@@ -150,20 +190,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // (Esto evita el error del UNIQUE KEY: id_evaluador, id_equipo_evaluado, id_curso)
         // ----------------------------------------------------------------------
         $stmt_maestro = $conn->prepare("
-            INSERT INTO evaluaciones_maestro 
-                (id_evaluador, id_equipo_evaluado, id_curso, puntaje_total) 
+            INSERT INTO evaluaciones_maestro
+                (id_evaluador, id_equipo_evaluado, id_curso, puntaje_total)
             VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE 
-                puntaje_total = VALUES(puntaje_total), 
+            ON DUPLICATE KEY UPDATE
+                puntaje_total = VALUES(puntaje_total),
                 fecha_evaluacion = CURRENT_TIMESTAMP
         ");
-        
+
         $stmt_maestro->bind_param("iiii", $id_evaluador, $id_equipo_evaluado, $id_curso_activo, $puntaje_total);
         $stmt_maestro->execute();
-        
+
         // Obtener el ID de la evaluación insertada o actualizada
         $id_evaluacion = $conn->insert_id;
-        
+
         // Si fue un UPDATE, el ID de la evaluación se mantiene. Hay que consultarlo:
         if ($stmt_maestro->affected_rows === 2) { // 2 filas afectadas = UPDATE en MySQL
             $stmt_fetch = $conn->prepare("SELECT id FROM evaluaciones_maestro WHERE id_evaluador = ? AND id_equipo_evaluado = ? AND id_curso = ?");
@@ -188,6 +228,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $log->close();
 
             $stmt_delete_detalle->close();
+        }
+
+        // ----------------------------------------------------------------------
+        // 1.1. CALCULAR Y ACTUALIZAR FIN_TEMPORIZADOR
+        // ----------------------------------------------------------------------
+        if ($duracion_minutos && $duracion_minutos > 0) {
+            // Obtener inicio_temporizador de la evaluación
+            $stmt_inicio = $conn->prepare("SELECT inicio_temporizador FROM evaluaciones_maestro WHERE id = ?");
+            $stmt_inicio->bind_param("i", $id_evaluacion);
+            $stmt_inicio->execute();
+            $inicio_result = $stmt_inicio->get_result();
+            $inicio_temporizador = $inicio_result->fetch_assoc()['inicio_temporizador'];
+            $stmt_inicio->close();
+
+            if ($inicio_temporizador) {
+                // Calcular fin_temporizador = inicio_temporizador + duracion_minutos
+                $fin_temporizador = date('Y-m-d H:i:s', strtotime($inicio_temporizador . " + $duracion_minutos minutes"));
+
+                // Actualizar el registro con fin_temporizador
+                $stmt_update_timer = $conn->prepare("UPDATE evaluaciones_maestro SET fin_temporizador = ? WHERE id = ?");
+                $stmt_update_timer->bind_param("si", $fin_temporizador, $id_evaluacion);
+                $stmt_update_timer->execute();
+                $stmt_update_timer->close();
+            }
         }
 
 

@@ -335,7 +335,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                         <p class="small text-muted">Soporta archivos <strong>CSV (.csv)</strong><?php echo $zipDisponible ? ' y <strong>Excel (.xlsx)</strong>' : ''; ?>. Los estudiantes se asociarán automáticamente al curso activo.</p>
                         <?php if (!$zipDisponible): ?>
                             <div class="alert alert-warning mb-3">
-                                <strong>⚠️ Nota:</strong> Los archivos Excel (.xlsx) no están disponibles porque la extensión ZipArchive no está habilitada. 
+                                <strong>⚠️ Nota:</strong> Los archivos Excel (.xlsx) no están disponibles porque la extensión ZipArchive no está habilitada.
                                 Por favor, use archivos <strong>CSV</strong> o <a href="verificar_zip.php" target="_blank">habilite ZipArchive</a>.
                             </div>
                         <?php endif; ?>
@@ -366,7 +366,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                         <p>Sube un archivo <strong>CSV</strong><?php echo $zipDisponible ? ' o <strong>Excel (.xlsx)</strong>' : ''; ?> con la lista de estudiantes y su equipo.</p>
                         <?php if (!$zipDisponible): ?>
                             <div class="alert alert-warning mb-3">
-                                <strong>⚠️ Nota:</strong> Los archivos Excel (.xlsx) no están disponibles porque la extensión ZipArchive no está habilitada. 
+                                <strong>⚠️ Nota:</strong> Los archivos Excel (.xlsx) no están disponibles porque la extensión ZipArchive no está habilitada.
                                 Por favor, use archivos <strong>CSV</strong> o <a href="verificar_zip.php" target="_blank">habilite ZipArchive</a>.
                             </div>
                         <?php endif; ?>
@@ -399,6 +399,44 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                             </p>
                         </div>
                         <a href="export_results.php" class="btn btn-success btn-lg mt-3">Exportar Resultados Finales</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-warning text-white">
+                        <h5 class="mb-0">⏱ Configuración de temporizador</h5>
+                    </div>
+                    <div class="card-body">
+                        <?php
+                        $hay_evaluaciones_iniciadas = hayEvaluacionesIniciadas($id_curso_activo);
+                        ?>
+                        <p>Configura la duración del temporizador para las evaluaciones de estudiantes en este curso.</p>
+                        <?php if ($hay_evaluaciones_iniciadas): ?>
+                            <div class="alert alert-danger">
+                                <strong>⚠️ Bloqueado:</strong> No se puede modificar la duración del temporizador porque ya hay evaluaciones iniciadas en este curso.
+                            </div>
+                        <?php endif; ?>
+                        <form action="admin_actions.php" method="POST">
+                            <input type="hidden" name="action" value="update_timer_duration">
+                            <div class="mb-3">
+                                <label for="duracion_minutos" class="form-label">Duración (minutos)</label>
+                                <input type="number" class="form-control" id="duracion_minutos" name="duracion_minutos"
+                                       min="1" max="300"
+                                       value="<?php
+                                           $stmt_duracion = $conn->prepare("SELECT duracion_minutos FROM cursos WHERE id = ?");
+                                           $stmt_duracion->bind_param("i", $id_curso_activo);
+                                           $stmt_duracion->execute();
+                                           $duracion_result = $stmt_duracion->get_result();
+                                           $duracion_actual = $duracion_result->fetch_assoc()['duracion_minutos'] ?? '';
+                                           $stmt_duracion->close();
+                                           echo htmlspecialchars($duracion_actual);
+                                       ?>" required <?php echo $hay_evaluaciones_iniciadas ? 'disabled' : ''; ?>>
+                                <small class="text-muted">Rango: 1-300 minutos</small>
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100" <?php echo $hay_evaluaciones_iniciadas ? 'disabled' : ''; ?>>Guardar tiempo</button>
+                        </form>
                     </div>
                 </div>
             </div>

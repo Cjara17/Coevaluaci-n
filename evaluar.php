@@ -117,6 +117,36 @@ if (!empty($criterios) && !empty($opciones)) {
     }
 }
 
+// Iniciar temporizador: Crear o actualizar registro de evaluación con inicio_temporizador
+$now = date('Y-m-d H:i:s');
+$stmt_timer = $conn->prepare("
+    INSERT INTO evaluaciones_maestro (id_evaluador, id_equipo_evaluado, id_curso, puntaje_total, inicio_temporizador)
+    VALUES (?, ?, ?, 0, ?)
+    ON DUPLICATE KEY UPDATE
+        inicio_temporizador = IF(inicio_temporizador IS NULL, VALUES(inicio_temporizador), inicio_temporizador)
+");
+$stmt_timer->bind_param("iiis", $_SESSION['id_usuario'], $id_equipo_a_evaluar, $id_curso_item, $now);
+$stmt_timer->execute();
+$id_evaluacion = $conn->insert_id;
+if ($stmt_timer->affected_rows === 2) { // UPDATE case
+    $stmt_get_id = $conn->prepare("SELECT id FROM evaluaciones_maestro WHERE id_evaluador = ? AND id_equipo_evaluado = ? AND id_curso = ?");
+    $stmt_get_id->bind_param("iii", $_SESSION['id_usuario'], $id_equipo_a_evaluar, $id_curso_item);
+    $stmt_get_id->execute();
+    $id_evaluacion = $stmt_get_id->get_result()->fetch_assoc()['id'];
+    $stmt_get_id->close();
+}
+$stmt_timer->close();
+
+// Calcular tiempo restante
+require 'timeout_helpers.php';
+$timeout_info = verificar_timeout($conn, $id_evaluacion);
+$tiempo_restante_en_segundos = $timeout_info['tiempo_restante_segundos'];
+
+if ($tiempo_restante_en_segundos <= 0) {
+    header("Location: tiempo_agotado.php?msg=" . urlencode("El tiempo para esta evaluación ha expirado."));
+    exit();
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -133,6 +163,10 @@ if (!empty($criterios) && !empty($opciones)) {
                 <h1 class="mb-1">Evaluando a: <strong><?php echo htmlspecialchars($nombre_item); ?></strong></h1>
                 <p class="mb-0">Selecciona la opción que mejor describe el desempeño en cada criterio.</p>
             </div>
+        </div>
+
+        <div id="timer" class="timer-box">
+            Cargando temporizador...
         </div>
 
         <form action="procesar_evaluacion.php" method="POST" id="evaluacionForm">
@@ -280,6 +314,46 @@ if (!empty($criterios) && !empty($opciones)) {
             <div class="d-grid gap-2 mt-4"><button type="submit" class="btn btn-primary btn-lg">Enviar Evaluación</button></div>
         </form>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let tiempoRestante = <?php echo $tiempo_restante_en_segundos; ?>;
+            const timerElement = document.getElementById('timer');
+            const form = document.getElementById('evaluacionForm');
+            const inputs = form.querySelectorAll('input, button');
+
+            function actualizarTimer() {
+                const minutos = Math.floor(tiempoRestante / 60);
+                const segundos = tiempoRestante % 60;
+                const tiempoFormateado = `${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+                timerElement.textContent = tiempoFormateado;
+
+                if (tiempoRestante > 60) {
+                    timerElement.style.color = 'green';
+                } else if (tiempoRestante > 20) {
+                    timerElement.style.color = 'yellow';
+                } else {
+                    timerElement.style.color = 'red';
+                }
+
+                if (tiempoRestante <= 0) {
+                    clearInterval(intervalo);
+                    timerElement.textContent = '00:00';
+                    // Bloquear formulario
+                    inputs.forEach(input => {
+                        input.disabled = true;
+                    });
+                    // Enviar automáticamente
+                    form.submit();
+                } else {
+                    tiempoRestante--;
+                }
+            }
+
+            actualizarTimer();
+            const intervalo = setInterval(actualizarTimer, 1000);
+        });
+    </script>
 
 </body>
 </html>
