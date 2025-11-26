@@ -300,36 +300,40 @@ $stmt_eval_cual->close();
         </div>
 
         <h2 class="mt-4">Miembros del Equipo</h2>
-        <table class="table table-bordered">
-            <thead><tr><th>Nombre</th><th>Correo</th></tr></thead>
-            <tbody>
-                <?php while($estudiante = $estudiantes->fetch_assoc()): ?>
-                <tr>
-                    <td><?php echo htmlspecialchars($estudiante['nombre']); ?></td>
-                    <td><?php echo htmlspecialchars($estudiante['email']); ?></td>
-                </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead><tr><th>Nombre</th><th>Correo</th></tr></thead>
+                <tbody>
+                    <?php while($estudiante = $estudiantes->fetch_assoc()): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($estudiante['nombre']); ?></td>
+                        <td><?php echo htmlspecialchars($estudiante['email']); ?></td>
+                    </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
 
         <h2 class="mt-5">Promedio por Criterio de Evaluación</h2>
-        <table class="table table-bordered table-striped">
-            <thead><tr><th>Criterio</th><th class="text-center">Puntaje Promedio</th></tr></thead>
-            <tbody>
-                <?php if (!empty($promedios_criterios)): ?>
-                    <?php foreach ($criterios_map as $id_criterio => $descripcion): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($descripcion); ?></td>
-                        <td class="text-center fw-bold">
-                            <?php echo isset($promedios_criterios[$id_criterio]) ? number_format($promedios_criterios[$id_criterio], 2) : '0.00'; ?>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr><td colspan="2" class="text-center">No hay evaluaciones o criterios activos para este equipo/curso.</td></tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead><tr><th>Criterio</th><th class="text-center">Puntaje Promedio</th></tr></thead>
+                <tbody>
+                    <?php if (!empty($promedios_criterios)): ?>
+                        <?php foreach ($criterios_map as $id_criterio => $descripcion): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($descripcion); ?></td>
+                            <td class="text-center fw-bold">
+                                <?php echo isset($promedios_criterios[$id_criterio]) ? number_format($promedios_criterios[$id_criterio], 2) : '0.00'; ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr><td colspan="2" class="text-center">No hay evaluaciones o criterios activos para este equipo/curso.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
 
         <h2 class="mt-5">Detalle de Evaluaciones Individuales (<?php echo $num_evaluaciones; ?>)</h2>
         <?php if ($num_evaluaciones > 0): ?>

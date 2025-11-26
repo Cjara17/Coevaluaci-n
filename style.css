@@ -3,6 +3,7 @@ body {
   color: #333;
   height: 100vh; /* asegura que el body ocupe toda la altura de la pantalla */
   margin: 0; /* elimina márgenes predeterminados */
+  font-family: Arial, sans-serif;
 }
 
 body.silueta {

@@ -80,7 +80,7 @@ $mensaje_exito = isset($_GET['success']) ? $_GET['success'] : '';
 
 // NUEVO: logo institucional en login sin header
 <div class="d-flex align-items-center justify-content-center mt-4">
-    <img src="img/logo_uct.png" alt="Logo UCT" style="height: 70px;">
+    <img src="img/logo_uct.png" alt="Logo UCT" style="height: 60px;">
 </div>
 
   <div class="container d-flex justify-content-center align-items-center vh-100">

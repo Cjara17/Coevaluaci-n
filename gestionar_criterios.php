@@ -245,6 +245,25 @@ $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success']) 
             min-width: 150px;
             text-align: center;
         }
+
+        /* Media queries para responsividad en tablas */
+        @media (max-width: 768px) {
+            .rubrica-table .criterio-cell {
+                min-width: 120px;
+            }
+            .rubrica-table .opcion-cell {
+                min-width: 100px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .rubrica-table .criterio-cell {
+                min-width: 80px;
+            }
+            .rubrica-table .opcion-cell {
+                min-width: 70px;
+            }
+        }
         .rubrica-table .puntaje-header {
             font-size: 0.9em;
             color: #666;

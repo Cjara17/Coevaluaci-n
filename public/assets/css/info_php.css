@@ -13,12 +13,12 @@ body {
 }
 h1 {
     color: #333;
-    border-bottom: 3px solid #007bff;
+    border-bottom: 3px solid #0077b6;
     padding-bottom: 10px;
 }
 .info-box {
     background-color: #e7f3ff;
-    border-left: 4px solid #007bff;
+    border-left: 4px solid #0077b6;
     padding: 15px;
     margin: 15px 0;
 }
@@ -116,7 +116,7 @@ th, td {
     text-align: left;
 }
 th {
-    background-color: #007bff;
+    background-color: #0077b6;
     color: white;
 }
 tr:nth-child(even) {
