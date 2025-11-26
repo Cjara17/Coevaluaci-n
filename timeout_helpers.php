@@ -97,6 +97,11 @@ function guardar_automatico_por_timeout($conn, $id_evaluacion, $datos_evaluacion
         }
 
         $conn->commit();
+
+        // Calcular y guardar calificación final
+        $resultado = EvaluacionCalculo::calcularCalificacionFinal($id_evaluacion);
+        EvaluacionCalculo::guardarCalificacionEnHistorial($id_evaluacion, $resultado["nota_final"]);
+
         return true;
 
     } catch (Exception $e) {

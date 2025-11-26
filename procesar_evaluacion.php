@@ -22,6 +22,7 @@
  */
 require 'db.php';
 require 'timeout_helpers.php';
+require 'backend/models/EvaluacionCalculo.php';
 // Requerir sesión activa, no importa si es docente o estudiante, ambos pueden evaluar.
 // Si no hay id_curso_activo en sesión, lo inferiremos desde el equipo evaluado.
 if (!isset($_SESSION['id_usuario'])) {
@@ -331,9 +332,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // 4. Confirmar transacción
         $conn->commit();
-        
-        // Redirección exitosa (Volver al dashboard del docente o a la página de éxito del estudiante)
-        header("Location: evaluacion_exitosa.php?msg=" . urlencode("Tu coevaluación se ha guardado con éxito."));
+
+        // Calcular y guardar calificación final
+        $resultado = EvaluacionCalculo::calcularCalificacionFinal($id_evaluacion);
+        EvaluacionCalculo::guardarCalificacionEnHistorial($id_evaluacion, $resultado["nota_final"]);
+
+        // Pasar datos a sesión para resultado_coevaluacion.php
+        $_SESSION["resultado_nota_final"] = $resultado["nota_final"];
+        $_SESSION["resultado_detalles"] = $resultado["detalles"];
+        $_SESSION["resultado_detalles_globales"] = $resultado;
+
+        // Redirigir a resultado_coevaluacion.php
+        header("Location: resultado_coevaluacion.php");
         exit();
 
     } catch (Exception $e) {

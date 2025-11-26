@@ -132,3 +132,66 @@ body.silueta {
 .timer-red {
     color: red;
 }
+
+.resultado-box {
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 600px;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.nota-final {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #0053a0;
+    margin-bottom: 20px;
+}
+
+.criterio-item {
+    padding: 10px;
+    border-bottom: 1px solid #dddddd;
+}
+
+.criterio-item:last-child {
+    border-bottom: none;
+}
+
+.criterio-nombre {
+    font-weight: bold;
+}
+
+@media (max-width: 500px) {
+    .resultado-box {
+        padding: 15px;
+        margin: 10px;
+    }
+    .nota-final {
+        font-size: 1.6rem;
+    }
+}
+
+.ponderacion-final {
+    margin-bottom: 20px;
+    font-size: 1rem;
+    color: #333;
+}
+
+h2 {
+    margin-bottom: 15px;
+}
+
+@media (max-width: 400px) {
+    .resultado-box {
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+    .nota-final {
+        font-size: 1.4rem;
+    }
+    .criterio-item {
+        padding: 8px;
+    }
+}
