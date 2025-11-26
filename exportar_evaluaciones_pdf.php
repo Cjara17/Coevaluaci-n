@@ -1,15 +1,42 @@
 <?php
 require 'db.php';
-verificar_sesion(true); // Solo docentes
 
-$id_curso_activo = isset($_GET['id_curso']) ? (int)$_GET['id_curso'] : (isset($_SESSION['id_curso_activo']) ? $_SESSION['id_curso_activo'] : null);
-$id_equipo = isset($_GET['id_equipo']) ? (int)$_GET['id_equipo'] : null;
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['id_usuario']) || !$_SESSION['es_docente']) {
+    http_response_code(403);
+    echo "Acceso denegado: no tienes permisos para exportar evaluaciones.";
+    exit;
+}
+
+$id_curso_activo = isset($_GET['id_curso']) ? intval($_GET['id_curso']) : (isset($_SESSION['id_curso_activo']) ? intval($_SESSION['id_curso_activo']) : null);
+if (!$id_curso_activo || $id_curso_activo <= 0) {
+    http_response_code(400);
+    echo "Parámetro id_curso inválido.";
+    exit;
+}
+
+$id_equipo = isset($_GET['id_equipo']) ? intval($_GET['id_equipo']) : null;
+if ($id_equipo !== null && $id_equipo <= 0) {
+    http_response_code(400);
+    echo "Parámetro id_equipo inválido.";
+    exit;
+}
+
 $fecha_desde = isset($_GET['fecha_desde']) ? $_GET['fecha_desde'] : null;
-$fecha_hasta = isset($_GET['fecha_hasta']) ? $_GET['fecha_hasta'] : null;
+if ($fecha_desde && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_desde)) {
+    http_response_code(400);
+    echo "Parámetro fecha_desde inválido.";
+    exit;
+}
 
-if (!$id_curso_activo) {
-    header("Location: select_course.php");
-    exit();
+$fecha_hasta = isset($_GET['fecha_hasta']) ? $_GET['fecha_hasta'] : null;
+if ($fecha_hasta && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_hasta)) {
+    http_response_code(400);
+    echo "Parámetro fecha_hasta inválido.";
+    exit;
 }
 
 // Verificar que el curso pertenece al docente
@@ -155,202 +182,142 @@ while ($row = $result_evaluaciones->fetch_assoc()) {
 }
 $stmt_evaluaciones->close();
 
-// Generar HTML para PDF
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exportación de Evaluaciones - <?php echo htmlspecialchars($curso['nombre_curso']); ?></title>
-    <style>
-        @media print {
-            body { margin: 0; padding: 20px; }
-            .no-print { display: none; }
-            .page-break { page-break-after: always; }
+// Generar PDF con TCPDF
+require_once('libs/tcpdf/TCPDF-6.6.2/tcpdf.php');
+
+// Crear nueva instancia de TCPDF
+$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+// Configurar información del documento
+$pdf->SetCreator(PDF_CREATOR);
+$pdf->SetAuthor('Sistema de Coevaluación');
+$pdf->SetTitle('Reporte de Evaluaciones - ' . $curso['nombre_curso']);
+$pdf->SetSubject('Evaluaciones del curso');
+$pdf->SetKeywords('evaluaciones, coevaluación, pdf');
+
+// Configurar márgenes
+$pdf->SetMargins(15, 20, 15);
+$pdf->SetHeaderMargin(10);
+$pdf->SetFooterMargin(10);
+
+// Configurar auto page breaks
+$pdf->SetAutoPageBreak(TRUE, 15);
+
+// Agregar página
+$pdf->AddPage();
+
+// Título principal
+$pdf->SetFont('helvetica', 'B', 16);
+$pdf->Cell(0, 10, 'Reporte de Evaluaciones', 0, 1, 'C');
+$pdf->Ln(5);
+
+// Información del curso
+$pdf->SetFont('helvetica', '', 12);
+$curso_info = 'Curso: ' . $curso['nombre_curso'] . ' ' . $curso['semestre'] . '-' . $curso['anio'];
+$pdf->Cell(0, 8, $curso_info, 0, 1, 'C');
+$pdf->Ln(5);
+
+// Filtros aplicados
+$pdf->SetFont('helvetica', 'B', 11);
+$pdf->Cell(0, 8, 'Filtros aplicados:', 0, 1, 'L');
+$pdf->SetFont('helvetica', '', 10);
+
+$filtros = [];
+if ($id_equipo) {
+    $filtros[] = 'Equipo específico seleccionado';
+}
+if ($fecha_desde) {
+    $filtros[] = 'Desde: ' . $fecha_desde;
+}
+if ($fecha_hasta) {
+    $filtros[] = 'Hasta: ' . $fecha_hasta;
+}
+$filtros[] = 'Total de evaluaciones: ' . count($evaluaciones);
+
+foreach ($filtros as $filtro) {
+    $pdf->Cell(0, 6, $filtro, 0, 1, 'L');
+}
+$pdf->Ln(5);
+
+if (empty($evaluaciones)) {
+    $pdf->SetFont('helvetica', 'I', 12);
+    $pdf->Cell(0, 10, 'No hay evaluaciones que coincidan con los filtros seleccionados.', 0, 1, 'C');
+} else {
+    $contador = 1;
+    foreach ($evaluaciones as $eval) {
+        // Verificar si necesitamos una nueva página
+        if ($pdf->GetY() > 200) {
+            $pdf->AddPage();
         }
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            font-size: 11px;
+
+        // Encabezado de evaluación
+        $pdf->SetFont('helvetica', 'B', 12);
+        $pdf->SetFillColor(240, 240, 240);
+        $pdf->Cell(0, 8, 'Evaluación #' . $contador . ' - ' . $eval['nombre_evaluado'], 1, 1, 'L', true);
+        $pdf->Ln(2);
+
+        // Información de la evaluación
+        $pdf->SetFont('helvetica', '', 10);
+
+        // Primera fila de información
+        $pdf->Cell(40, 6, 'Tipo:', 0, 0, 'L');
+        $pdf->Cell(50, 6, $eval['tipo_evaluado'], 0, 0, 'L');
+        $pdf->Cell(40, 6, 'Evaluador:', 0, 0, 'L');
+        $pdf->Cell(0, 6, $eval['nombre_evaluador'] . ' (' . ($eval['es_docente'] ? 'Docente' : 'Estudiante') . ')', 0, 1, 'L');
+
+        // Segunda fila de información
+        $pdf->Cell(40, 6, 'Fecha:', 0, 0, 'L');
+        $pdf->Cell(50, 6, date('d/m/Y H:i', strtotime($eval['fecha_evaluacion'])), 0, 0, 'L');
+        $pdf->Cell(40, 6, 'Puntaje Total:', 0, 0, 'L');
+        $pdf->Cell(30, 6, $eval['puntaje_total'] . ' / ' . $puntaje_maximo, 0, 0, 'L');
+        $pdf->Cell(20, 6, 'Nota Final:', 0, 0, 'L');
+        $pdf->SetFont('helvetica', 'B', 11);
+        $pdf->SetTextColor(13, 110, 253);
+        $pdf->Cell(0, 6, number_format($eval['nota_final'], 1), 0, 1, 'L');
+        $pdf->SetFont('helvetica', '', 10);
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->Ln(3);
+
+        // Tabla de detalles si existen
+        if (!empty($eval['detalles'])) {
+            // Encabezados de tabla
+            $pdf->SetFont('helvetica', 'B', 9);
+            $pdf->SetFillColor(248, 249, 250);
+            $pdf->Cell(80, 7, 'Criterio', 1, 0, 'C', true);
+            $pdf->Cell(20, 7, 'Puntaje', 1, 0, 'C', true);
+            $pdf->Cell(0, 7, 'Comentarios', 1, 1, 'C', true);
+
+            // Filas de datos
+            $pdf->SetFont('helvetica', '', 8);
+            $fill = false;
+            foreach ($eval['detalles'] as $detalle) {
+                $pdf->SetFillColor(245, 245, 245);
+                $comentarios = $detalle['numerical_details'] ?? 'Sin comentarios';
+
+                // Calcular altura necesaria para la celda de comentarios
+                $altura_linea = 5;
+                $ancho_comentarios = $pdf->GetPageWidth() - 115; // 80 + 20 + márgenes
+                $altura_comentarios = $pdf->getStringHeight($ancho_comentarios, $comentarios);
+                $altura_fila = max($altura_linea, $altura_comentarios);
+
+                $y_inicial = $pdf->GetY();
+
+                $pdf->MultiCell(80, $altura_fila, $detalle['nombre_criterio'], 1, 'L', $fill, 0, '', $y_inicial);
+                $pdf->MultiCell(20, $altura_fila, $detalle['puntaje'], 1, 'C', $fill, 0, '', $y_inicial);
+                $pdf->MultiCell(0, $altura_fila, $comentarios, 1, 'L', $fill, 1, '', $y_inicial);
+
+                $fill = !$fill;
+            }
         }
-        h1 {
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 18px;
-        }
-        .curso-info {
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 12px;
-        }
-        .filtros {
-            margin-bottom: 20px;
-            padding: 10px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
-            font-size: 10px;
-        }
-        .evaluacion {
-            margin-bottom: 30px;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 5px;
-            page-break-inside: avoid;
-        }
-        .evaluacion-header {
-            background-color: #e9ecef;
-            padding: 10px;
-            margin: -15px -15px 15px -15px;
-            border-radius: 5px 5px 0 0;
-        }
-        .evaluacion-header h3 {
-            margin: 0;
-            font-size: 14px;
-        }
-        .evaluacion-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-            font-size: 10px;
-        }
-        .info-item {
-            padding: 5px;
-        }
-        .info-label {
-            font-weight: bold;
-            color: #666;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            font-size: 10px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 6px;
-            text-align: left;
-        }
-        th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-            text-align: center;
-        }
-        .puntaje-total {
-            font-weight: bold;
-            text-align: center;
-            background-color: #e9ecef;
-        }
-        .nota-final {
-            font-size: 14px;
-            font-weight: bold;
-            color: #0d6efd;
-        }
-        .comentarios {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-left: 3px solid #0d6efd;
-            font-size: 10px;
-        }
-        .no-print {
-            text-align: center;
-            margin: 20px 0;
-        }
-        .no-print button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    <div class="no-print">
-        <button onclick="window.print()">Imprimir / Guardar como PDF</button>
-    </div>
-    
-    <h1>Reporte de Evaluaciones</h1>
-    <div class="curso-info">
-        Curso: <?php echo htmlspecialchars($curso['nombre_curso'] . ' ' . $curso['semestre'] . '-' . $curso['anio']); ?>
-    </div>
-    
-    <div class="filtros">
-        <strong>Filtros aplicados:</strong><br>
-        <?php if ($id_equipo): ?>
-            Equipo específico seleccionado<br>
-        <?php endif; ?>
-        <?php if ($fecha_desde): ?>
-            Desde: <?php echo htmlspecialchars($fecha_desde); ?><br>
-        <?php endif; ?>
-        <?php if ($fecha_hasta): ?>
-            Hasta: <?php echo htmlspecialchars($fecha_hasta); ?><br>
-        <?php endif; ?>
-        Total de evaluaciones: <?php echo count($evaluaciones); ?>
-    </div>
-    
-    <?php if (empty($evaluaciones)): ?>
-        <p style="text-align: center; color: #666; margin-top: 50px;">No hay evaluaciones que coincidan con los filtros seleccionados.</p>
-    <?php else: ?>
-        <?php foreach ($evaluaciones as $index => $eval): ?>
-            <div class="evaluacion">
-                <div class="evaluacion-header">
-                    <h3>Evaluación #<?php echo $index + 1; ?> - <?php echo htmlspecialchars($eval['nombre_evaluado']); ?></h3>
-                </div>
-                
-                <div class="evaluacion-info">
-                    <div class="info-item">
-                        <span class="info-label">Tipo:</span> <?php echo htmlspecialchars($eval['tipo_evaluado']); ?>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Evaluador:</span> <?php echo htmlspecialchars($eval['nombre_evaluador']); ?>
-                        <span style="color: <?php echo $eval['es_docente'] ? '#0d6efd' : '#6c757d'; ?>;">
-                            (<?php echo $eval['es_docente'] ? 'Docente' : 'Estudiante'; ?>)
-                        </span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Fecha:</span> <?php echo date('d/m/Y H:i', strtotime($eval['fecha_evaluacion'])); ?>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Puntaje Total:</span> <?php echo $eval['puntaje_total']; ?> / <?php echo $puntaje_maximo; ?>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Nota Final:</span> 
-                        <span class="nota-final"><?php echo number_format($eval['nota_final'], 1); ?></span>
-                    </div>
-                </div>
-                
-                <?php if (!empty($eval['detalles'])): ?>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Criterio</th>
-                                <th style="width: 80px;">Puntaje</th>
-                                <th>Comentarios</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($eval['detalles'] as $detalle): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($detalle['nombre_criterio']); ?></td>
-                                    <td style="text-align: center;"><?php echo $detalle['puntaje']; ?></td>
-                                    <td><?php echo nl2br(htmlspecialchars($detalle['numerical_details'] ?? 'Sin comentarios')); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
-            </div>
-        <?php endforeach; ?>
-    <?php endif; ?>
-</body>
-</html>
-<?php
+
+        $pdf->Ln(8);
+        $contador++;
+    }
+}
+
+// Salida del PDF
+header('Content-Type: application/pdf');
+header('Content-Disposition: attachment; filename="evaluaciones_' . date('Y-m-d_H-i-s') . '.pdf"');
+$pdf->Output('evaluaciones_' . date('Y-m-d_H-i-s') . '.pdf', 'D');
 exit();
-?>
 

@@ -1,22 +1,49 @@
 <?php
 require 'db.php';
-verificar_sesion(true); // Solo docentes
 
-$id_curso_activo = isset($_GET['id_curso']) ? (int)$_GET['id_curso'] : (isset($_SESSION['id_curso_activo']) ? $_SESSION['id_curso_activo'] : null);
-$id_equipo = isset($_GET['id_equipo']) ? (int)$_GET['id_equipo'] : null;
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['id_usuario']) || !$_SESSION['es_docente']) {
+    http_response_code(403);
+    echo "Acceso denegado: no tienes permisos para exportar evaluaciones.";
+    exit;
+}
+
+$id_curso_activo = isset($_GET['id_curso']) ? intval($_GET['id_curso']) : (isset($_SESSION['id_curso_activo']) ? intval($_SESSION['id_curso_activo']) : null);
+if (!$id_curso_activo || $id_curso_activo <= 0) {
+    http_response_code(400);
+    echo "Parámetro id_curso inválido.";
+    exit;
+}
+
+$id_equipo = isset($_GET['id_equipo']) ? intval($_GET['id_equipo']) : null;
+if ($id_equipo !== null && $id_equipo <= 0) {
+    http_response_code(400);
+    echo "Parámetro id_equipo inválido.";
+    exit;
+}
+
 $fecha_desde = isset($_GET['fecha_desde']) ? $_GET['fecha_desde'] : null;
-$fecha_hasta = isset($_GET['fecha_hasta']) ? $_GET['fecha_hasta'] : null;
+if ($fecha_desde && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_desde)) {
+    http_response_code(400);
+    echo "Parámetro fecha_desde inválido.";
+    exit;
+}
 
-if (!$id_curso_activo) {
-    header("Location: select_course.php");
-    exit();
+$fecha_hasta = isset($_GET['fecha_hasta']) ? $_GET['fecha_hasta'] : null;
+if ($fecha_hasta && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_hasta)) {
+    http_response_code(400);
+    echo "Parámetro fecha_hasta inválido.";
+    exit;
 }
 
 // Verificar que el curso pertenece al docente
 $stmt_check = $conn->prepare("
-    SELECT c.id 
-    FROM cursos c 
-    JOIN docente_curso dc ON c.id = dc.id_curso 
+    SELECT c.id
+    FROM cursos c
+    JOIN docente_curso dc ON c.id = dc.id_curso
     WHERE c.id = ? AND dc.id_docente = ?
 ");
 $stmt_check->bind_param("ii", $id_curso_activo, $_SESSION['id_usuario']);

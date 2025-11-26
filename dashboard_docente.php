@@ -853,14 +853,25 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="formExportarEvaluaciones" method="GET">
-                    <input type="hidden" name="id_curso" value="<?php echo $id_curso_activo; ?>">
                     <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="id_curso" class="form-label">Seleccionar Curso</label>
+                            <select class="form-select" name="id_curso" id="id_curso" required>
+                                <?php
+                                $all_cursos->data_seek(0); // Reset pointer
+                                while($curso = $all_cursos->fetch_assoc()): ?>
+                                    <option value="<?php echo $curso['id']; ?>" <?php echo ($curso['id'] == $id_curso_activo) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($curso['nombre_curso'] . ' ' . $curso['semestre'] . '-' . $curso['anio']); ?>
+                                    </option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
                         <div class="mb-3">
                             <label for="filtro_equipo" class="form-label">Filtrar por Equipo (opcional)</label>
                             <select class="form-select" name="id_equipo" id="filtro_equipo">
                                 <option value="">Todos los equipos/estudiantes</option>
                                 <?php
-                                // Obtener equipos del curso
+                                // Obtener equipos del curso activo (para mostrar opciones iniciales)
                                 $stmt_equipos = $conn->prepare("SELECT id, nombre_equipo FROM equipos WHERE id_curso = ? ORDER BY nombre_equipo ASC");
                                 $stmt_equipos->bind_param("i", $id_curso_activo);
                                 $stmt_equipos->execute();
@@ -869,13 +880,13 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                                     echo '<option value="' . $equipo['id'] . '">' . htmlspecialchars($equipo['nombre_equipo']) . '</option>';
                                 }
                                 $stmt_equipos->close();
-                                
+
                                 // Obtener estudiantes individuales (sin equipo)
                                 $stmt_estudiantes = $conn->prepare("
                                     SELECT DISTINCT u.id, u.nombre, u.email
                                     FROM usuarios u
                                     JOIN evaluaciones_maestro em ON em.id_equipo_evaluado = u.id
-                                    WHERE u.es_docente = 0 
+                                    WHERE u.es_docente = 0
                                     AND u.id_equipo IS NULL
                                     AND em.id_curso = ?
                                     ORDER BY u.nombre ASC
@@ -901,7 +912,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                             </div>
                         </div>
                         <div class="alert alert-info">
-                            <small>Si no seleccionas ningún filtro, se exportarán todas las evaluaciones del curso.</small>
+                            <small>Selecciona un curso obligatorio. Los filtros de equipo y fechas son opcionales. Si no seleccionas ningún filtro adicional, se exportarán todas las evaluaciones del curso seleccionado.</small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -1291,6 +1302,34 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                     }
                 });
             });
+
+            // Validación del formulario de exportar evaluaciones
+            const formExportar = document.getElementById('formExportarEvaluaciones');
+            if (formExportar) {
+                formExportar.addEventListener('submit', function(event) {
+                    const idCurso = document.getElementById('id_curso').value;
+                    const fechaDesde = document.getElementById('fecha_desde').value;
+                    const fechaHasta = document.getElementById('fecha_hasta').value;
+
+                    // Validar que se haya seleccionado un curso
+                    if (!idCurso) {
+                        alert('Debes seleccionar un curso para exportar las evaluaciones.');
+                        event.preventDefault();
+                        return;
+                    }
+
+                    // Validar fechas si ambas están presentes
+                    if (fechaDesde && fechaHasta) {
+                        const desde = new Date(fechaDesde);
+                        const hasta = new Date(fechaHasta);
+                        if (desde > hasta) {
+                            alert('La fecha "Desde" no puede ser posterior a la fecha "Hasta".');
+                            event.preventDefault();
+                            return;
+                        }
+                    }
+                });
+            }
         });
 
         // Función para abrir modal de editar evaluación

@@ -1,19 +1,28 @@
 <?php
 require 'db.php';
-verificar_sesion(true); // Solo docentes
 
-$id_curso_activo = isset($_GET['id_curso']) ? (int)$_GET['id_curso'] : (isset($_SESSION['id_curso_activo']) ? $_SESSION['id_curso_activo'] : null);
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-if (!$id_curso_activo) {
-    header("Location: select_course.php");
-    exit();
+if (!isset($_SESSION['id_usuario']) || !$_SESSION['es_docente']) {
+    http_response_code(403);
+    echo "Acceso denegado: no tienes permisos para exportar la rúbrica.";
+    exit;
+}
+
+$id_curso_activo = isset($_GET['id_curso']) ? intval($_GET['id_curso']) : (isset($_SESSION['id_curso_activo']) ? intval($_SESSION['id_curso_activo']) : null);
+if (!$id_curso_activo || $id_curso_activo <= 0) {
+    http_response_code(400);
+    echo "Parámetro id_curso inválido.";
+    exit;
 }
 
 // Verificar que el curso pertenece al docente
 $stmt_check = $conn->prepare("
-    SELECT c.id 
-    FROM cursos c 
-    JOIN docente_curso dc ON c.id = dc.id_curso 
+    SELECT c.id
+    FROM cursos c
+    JOIN docente_curso dc ON c.id = dc.id_curso
     WHERE c.id = ? AND dc.id_docente = ?
 ");
 $stmt_check->bind_param("ii", $id_curso_activo, $_SESSION['id_usuario']);
