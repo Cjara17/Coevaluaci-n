@@ -3,3 +3,16 @@
     color: #0d6efd; /* Bootstrap primary blue for links */
     display: block;
 }
+
+/* Media queries para responsividad */
+@media (max-width: 768px) {
+    .clickable-text {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .clickable-text {
+        font-size: 0.8rem;
+    }
+}

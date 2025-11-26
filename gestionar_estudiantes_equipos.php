@@ -91,7 +91,8 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                     </div>
                     <div class="card-body" style="max-height: 600px; overflow-y: auto;">
                         <?php if ($estudiantes->num_rows > 0): ?>
-                            <table class="table table-sm table-hover">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
                                 <thead>
                                     <tr>
                                         <th style="width: 40px;">
@@ -124,6 +125,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                                     <?php endwhile; ?>
                                 </tbody>
                             </table>
+                            </div>
                         <?php else: ?>
                             <p class="text-muted text-center">No hay estudiantes registrados en este curso.</p>
                         <?php endif; ?>
@@ -160,8 +162,8 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                                             </small>
                                         </div>
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <button type="button" class="btn btn-outline-warning btn-sm" 
-                                                    onclick="abrirModalEditarEquipo(<?php echo $equipo['id']; ?>, '<?php echo htmlspecialchars($equipo['nombre_equipo'], ENT_QUOTES); ?>')"
+                                            <button type="button" class="btn btn-outline-warning btn-sm"
+                                                    onclick="abrirModalEditarEquipo(<?php echo $equipo['id']; ?>, <?php echo json_encode($equipo['nombre_equipo']); ?>)"
                                                     title="Editar equipo">
                                                 Editar
                                             </button>
@@ -203,7 +205,8 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                         <h6 class="mb-3">Agregar Estudiantes al Equipo</h6>
                         <p class="text-muted small">Selecciona los estudiantes que deseas agregar al equipo:</p>
                         <div style="max-height: 400px; overflow-y: auto;">
-                            <table class="table table-sm table-hover">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
                                 <thead>
                                     <tr>
                                         <th style="width: 40px;">
@@ -250,7 +253,8 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                         <!-- Estudiantes actuales del equipo -->
                         <h6 class="mb-3">Estudiantes Actuales del Equipo</h6>
                         <div id="estudiantesActualesContainer" style="max-height: 200px; overflow-y: auto;">
-                            <table class="table table-sm">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
                                 <thead>
                                     <tr>
                                         <th>Nombre</th>
@@ -270,7 +274,8 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                         <h6 class="mb-3">Agregar Estudiantes al Equipo</h6>
                         <p class="text-muted small">Selecciona los estudiantes que deseas agregar:</p>
                         <div style="max-height: 300px; overflow-y: auto;">
-                            <table class="table table-sm table-hover">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
                                 <thead>
                                     <tr>
                                         <th style="width: 40px;">
@@ -285,6 +290,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                                     <!-- Se llenará dinámicamente -->
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">

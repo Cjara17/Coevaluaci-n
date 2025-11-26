@@ -480,16 +480,17 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
             </div>
         <?php endif; ?>
         
-        <table class="table table-striped table-hover shadow-sm">
-            <thead class="table-dark">
-                <tr>
-                    <th>Evaluación</th>
-                    <th class="text-center">Tipo</th>
-                    <th class="text-center">Estado</th>
-                    <th class="text-center">Fecha Creación</th>
-                    <th class="text-center">Acciones</th>
-                </tr>
-            </thead>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover shadow-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Evaluación</th>
+                        <th class="text-center">Tipo</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center">Fecha Creación</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
             <tbody>
                 <?php if ($evaluaciones->num_rows > 0): ?>
                     <?php while($evaluacion = $evaluaciones->fetch_assoc()): ?>

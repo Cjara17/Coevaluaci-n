@@ -7,3 +7,18 @@
     height: 40px;
     margin-right: 15px;
 }
+
+/* Media queries para responsividad */
+@media (max-width: 768px) {
+    .logo-img {
+        height: 30px;
+        margin-right: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo-img {
+        height: 25px;
+        margin-right: 8px;
+    }
+}

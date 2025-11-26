@@ -11,9 +11,18 @@
     .col-responsive {
         width: 100%;
         margin-bottom: 20px;
+        padding: 5px; /* reducir padding en móviles */
     }
 
     #btn-toggle-notas {
         width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .col-responsive {
+        padding: 2px;
+        margin-bottom: 15px;
     }
 }

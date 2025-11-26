@@ -18,12 +18,14 @@ body.silueta {
   display: flex;
   align-items: center;    /* centra verticalmente */
   justify-content: center; /* centra horizontalmente */
+  padding: 1rem; /* padding para móviles */
 }
 
 .login-card {
   max-width: 700px; /* ancho más amplio */
   width: 100%;
   padding: 2rem; /* espacio interno */
+  margin: 0 auto; /* centrar horizontalmente */
 }
 
 .card {
@@ -34,12 +36,76 @@ body.silueta {
 .btn-primary {
   background-color: #0077b6;
   border: none;
+  min-height: 44px; /* Touch target minimum */
+  padding: 0.75rem 1.5rem; /* Consistent padding */
 }
 
 .btn-primary:hover {
   background-color: #023e8a;
 }
 
+/* Button groups and flex layouts */
+.btn-group {
+  gap: 0.5rem;
+}
+
+.btn-group-vertical {
+  gap: 0.5rem;
+}
+
+/* Mobile button optimizations */
+@media (max-width: 768px) {
+  .btn {
+    min-height: 44px; /* Ensure touch targets */
+    font-size: 1rem; /* Prevent zoom on iOS */
+    padding: 0.75rem 1rem;
+  }
+
+  .btn-sm {
+    min-height: 40px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* Convert horizontal button groups to vertical on mobile */
+  .btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-group .btn {
+    width: 100%;
+  }
+
+  /* Modal buttons */
+  .modal-footer .btn {
+    flex: 1;
+    margin: 0.25rem;
+  }
+}
+
 .alert {
   font-size: 0.9rem;
+}
+
+/* Media queries para responsividad */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 0.5rem;
+  }
+
+  .login-card {
+    padding: 1rem;
+    margin: 0 0.5rem;
+  }
+
+  .alert {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 0.75rem;
+  }
 }
