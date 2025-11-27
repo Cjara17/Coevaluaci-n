@@ -113,14 +113,26 @@ if ($action === 'get_team_students' && $_SERVER['REQUEST_METHOD'] === 'GET') {
 
 // Acción: Crear equipo
 if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $codigo_equipo = isset($_POST['codigo_equipo']) ? trim($_POST['codigo_equipo']) : '';
     $nombre_equipo = isset($_POST['nombre_equipo']) ? trim($_POST['nombre_equipo']) : '';
     $estudiantes_ids = isset($_POST['estudiantes']) ? $_POST['estudiantes'] : [];
-    
-    if (empty($nombre_equipo)) {
-        header("Location: gestionar_estudiantes_equipos.php?error=" . urlencode("El nombre del equipo no puede estar vacío."));
+
+    if (empty($codigo_equipo) || empty($nombre_equipo)) {
+        header("Location: gestionar_estudiantes_equipos.php?error=" . urlencode("El ID y nombre del equipo no pueden estar vacíos."));
         exit();
     }
-    
+
+    // Verificar que no exista un equipo con el mismo código en el curso
+    $stmt_check_codigo = $conn->prepare("SELECT id FROM equipos WHERE codigo_equipo = ? AND id_curso = ?");
+    $stmt_check_codigo->bind_param("si", $codigo_equipo, $id_curso_activo);
+    $stmt_check_codigo->execute();
+    if ($stmt_check_codigo->get_result()->num_rows > 0) {
+        $stmt_check_codigo->close();
+        header("Location: gestionar_estudiantes_equipos.php?error=" . urlencode("Ya existe un equipo con ese ID en este curso."));
+        exit();
+    }
+    $stmt_check_codigo->close();
+
     // Verificar que no exista un equipo con el mismo nombre en el curso
     $stmt_check = $conn->prepare("SELECT id FROM equipos WHERE nombre_equipo = ? AND id_curso = ?");
     $stmt_check->bind_param("si", $nombre_equipo, $id_curso_activo);
@@ -135,8 +147,8 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn->begin_transaction();
     try {
         // Crear el equipo
-        $stmt = $conn->prepare("INSERT INTO equipos (nombre_equipo, id_curso, estado_presentacion) VALUES (?, ?, 'pendiente')");
-        $stmt->bind_param("si", $nombre_equipo, $id_curso_activo);
+        $stmt = $conn->prepare("INSERT INTO equipos (codigo_equipo, nombre_equipo, id_curso, estado_presentacion) VALUES (?, ?, ?, 'pendiente')");
+        $stmt->bind_param("ssi", $codigo_equipo, $nombre_equipo, $id_curso_activo);
         $stmt->execute();
         $id_equipo = $conn->insert_id;
         $stmt->close();
@@ -192,26 +204,38 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 // Acción: Actualizar equipo
 if ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $id_equipo = isset($_POST['id_equipo']) ? (int)$_POST['id_equipo'] : 0;
+    $codigo_equipo = isset($_POST['codigo_equipo']) ? trim($_POST['codigo_equipo']) : '';
     $nombre_equipo = isset($_POST['nombre_equipo']) ? trim($_POST['nombre_equipo']) : '';
     $estudiantes_ids = isset($_POST['estudiantes']) ? $_POST['estudiantes'] : [];
-    
-    if ($id_equipo === 0 || empty($nombre_equipo)) {
-        header("Location: gestionar_estudiantes_equipos.php?error=" . urlencode("Datos incompletos."));
+
+    if ($id_equipo === 0 || empty($codigo_equipo) || empty($nombre_equipo)) {
+        header("Location: gestionar_estudiantes_equipos.php?error=" . urlencode("El ID y nombre del equipo no pueden estar vacíos."));
         exit();
     }
-    
+
     // Verificar que el equipo pertenezca al curso activo
-    $stmt_check = $conn->prepare("SELECT id, nombre_equipo FROM equipos WHERE id = ? AND id_curso = ?");
+    $stmt_check = $conn->prepare("SELECT id, codigo_equipo, nombre_equipo FROM equipos WHERE id = ? AND id_curso = ?");
     $stmt_check->bind_param("ii", $id_equipo, $id_curso_activo);
     $stmt_check->execute();
     $equipo_actual = $stmt_check->get_result()->fetch_assoc();
     $stmt_check->close();
-    
+
     if (!$equipo_actual) {
         header("Location: gestionar_estudiantes_equipos.php?error=" . urlencode("Equipo no encontrado o no pertenece a este curso."));
         exit();
     }
-    
+
+    // Verificar que no exista otro equipo con el mismo código en el curso
+    $stmt_check_codigo = $conn->prepare("SELECT id FROM equipos WHERE codigo_equipo = ? AND id_curso = ? AND id != ?");
+    $stmt_check_codigo->bind_param("sii", $codigo_equipo, $id_curso_activo, $id_equipo);
+    $stmt_check_codigo->execute();
+    if ($stmt_check_codigo->get_result()->num_rows > 0) {
+        $stmt_check_codigo->close();
+        header("Location: gestionar_estudiantes_equipos.php?error=" . urlencode("Ya existe otro equipo con ese ID en este curso."));
+        exit();
+    }
+    $stmt_check_codigo->close();
+
     // Verificar que no exista otro equipo con el mismo nombre en el curso
     $stmt_check_nombre = $conn->prepare("SELECT id FROM equipos WHERE nombre_equipo = ? AND id_curso = ? AND id != ?");
     $stmt_check_nombre->bind_param("sii", $nombre_equipo, $id_curso_activo, $id_equipo);
@@ -222,45 +246,45 @@ if ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
     $stmt_check_nombre->close();
-    
+
     $conn->begin_transaction();
     try {
-        // Actualizar el nombre del equipo
-        $stmt = $conn->prepare("UPDATE equipos SET nombre_equipo = ? WHERE id = ? AND id_curso = ?");
-        $stmt->bind_param("sii", $nombre_equipo, $id_equipo, $id_curso_activo);
+        // Actualizar el equipo
+        $stmt = $conn->prepare("UPDATE equipos SET codigo_equipo = ?, nombre_equipo = ? WHERE id = ? AND id_curso = ?");
+        $stmt->bind_param("ssii", $codigo_equipo, $nombre_equipo, $id_equipo, $id_curso_activo);
         $stmt->execute();
         $stmt->close();
-        
+
         // Agregar nuevos estudiantes si se seleccionaron
         $agregados = 0;
         $user_id = $_SESSION['id_usuario'];
         $now = date('Y-m-d H:i:s');
-        
+
         if (!empty($estudiantes_ids)) {
             foreach ($estudiantes_ids as $id_estudiante) {
                 $id_estudiante = (int)$id_estudiante;
-                
+
                 // Verificar que el estudiante pertenezca al curso activo
                 $stmt_verificar = $conn->prepare("SELECT id, nombre FROM usuarios WHERE id = ? AND id_curso = ? AND es_docente = 0");
                 $stmt_verificar->bind_param("ii", $id_estudiante, $id_curso_activo);
                 $stmt_verificar->execute();
                 $estudiante = $stmt_verificar->get_result()->fetch_assoc();
                 $stmt_verificar->close();
-                
+
                 if ($estudiante) {
                     // Asignar estudiante al equipo
                     $stmt_asignar = $conn->prepare("UPDATE usuarios SET id_equipo = ? WHERE id = ?");
                     $stmt_asignar->bind_param("ii", $id_equipo, $id_estudiante);
                     $stmt_asignar->execute();
                     $stmt_asignar->close();
-                    
+
                     $agregados++;
                 }
             }
         }
-        
+
         // Registrar en log
-        $detalle = "Editó equipo ID $id_equipo: '" . $equipo_actual['nombre_equipo'] . "' -> '$nombre_equipo'";
+        $detalle = "Editó equipo ID $id_equipo: '" . $equipo_actual['codigo_equipo'] . " - " . $equipo_actual['nombre_equipo'] . "' -> '$codigo_equipo - $nombre_equipo'";
         if ($agregados > 0) {
             $detalle .= " y agregó $agregados estudiante(s)";
         }
@@ -268,7 +292,7 @@ if ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $log->bind_param("iss", $user_id, $detalle, $now);
         $log->execute();
         $log->close();
-        
+
         $conn->commit();
         $mensaje = "Equipo actualizado exitosamente.";
         if ($agregados > 0) {
@@ -386,6 +410,61 @@ if ($action === 'remove_student' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: gestionar_estudiantes_equipos.php?status=" . urlencode("Estudiante eliminado del equipo exitosamente."));
     } else {
         header("Location: gestionar_estudiantes_equipos.php?error=" . urlencode("Error al eliminar el estudiante del equipo: " . $stmt->error));
+    }
+    $stmt->close();
+    exit();
+}
+
+// Acción: Actualizar nombre del equipo
+if ($action === 'update_equipo_nombre' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $id_equipo = isset($_POST['id_equipo']) ? (int)$_POST['id_equipo'] : 0;
+    $nuevo_nombre = isset($_POST['nuevo_nombre']) ? trim($_POST['nuevo_nombre']) : '';
+
+    if ($id_equipo === 0 || empty($nuevo_nombre)) {
+        header("Location: editar_equipo.php?id_equipo=$id_equipo&error=" . urlencode("El nombre del equipo no puede estar vacío."));
+        exit();
+    }
+
+    // Verificar que el equipo pertenezca al curso activo
+    $stmt_check = $conn->prepare("SELECT nombre_equipo FROM equipos WHERE id = ? AND id_curso = ?");
+    $stmt_check->bind_param("ii", $id_equipo, $id_curso_activo);
+    $stmt_check->execute();
+    $equipo_actual = $stmt_check->get_result()->fetch_assoc();
+    $stmt_check->close();
+
+    if (!$equipo_actual) {
+        header("Location: gestionar_estudiantes_equipos.php?error=" . urlencode("Equipo no encontrado o no pertenece a este curso."));
+        exit();
+    }
+
+    // Verificar que no exista otro equipo con el mismo nombre en el curso
+    $stmt_check_nombre = $conn->prepare("SELECT id FROM equipos WHERE nombre_equipo = ? AND id_curso = ? AND id != ?");
+    $stmt_check_nombre->bind_param("sii", $nuevo_nombre, $id_curso_activo, $id_equipo);
+    $stmt_check_nombre->execute();
+    if ($stmt_check_nombre->get_result()->num_rows > 0) {
+        $stmt_check_nombre->close();
+        header("Location: editar_equipo.php?id_equipo=$id_equipo&error=" . urlencode("Ya existe otro equipo con ese nombre en este curso."));
+        exit();
+    }
+    $stmt_check_nombre->close();
+
+    // Actualizar el nombre del equipo
+    $stmt = $conn->prepare("UPDATE equipos SET nombre_equipo = ? WHERE id = ? AND id_curso = ?");
+    $stmt->bind_param("sii", $nuevo_nombre, $id_equipo, $id_curso_activo);
+
+    if ($stmt->execute()) {
+        // Registrar en log
+        $user_id = $_SESSION['id_usuario'];
+        $now = date('Y-m-d H:i:s');
+        $detalle = "Editó nombre del equipo ID $id_equipo: '" . $equipo_actual['nombre_equipo'] . "' -> '$nuevo_nombre'";
+        $log = $conn->prepare("INSERT INTO logs (id_usuario, accion, detalle, fecha) VALUES (?, 'ACTUALIZAR', ?, ?)");
+        $log->bind_param("iss", $user_id, $detalle, $now);
+        $log->execute();
+        $log->close();
+
+        header("Location: gestionar_estudiantes_equipos.php?status=" . urlencode("Nombre del equipo actualizado exitosamente."));
+    } else {
+        header("Location: editar_equipo.php?id_equipo=$id_equipo&error=" . urlencode("Error al actualizar el nombre del equipo: " . $stmt->error));
     }
     $stmt->close();
     exit();

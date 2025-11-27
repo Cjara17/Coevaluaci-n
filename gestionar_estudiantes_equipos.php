@@ -34,12 +34,12 @@ $estudiantes = $stmt_estudiantes->get_result();
 
 // Obtener todos los equipos del curso activo
 $sql_equipos = "
-    SELECT e.id, e.nombre_equipo, e.estado_presentacion,
+    SELECT e.id, e.nombre_equipo, e.codigo_equipo, e.estado_presentacion,
            COUNT(u.id) as total_estudiantes
     FROM equipos e
     LEFT JOIN usuarios u ON e.id = u.id_equipo
     WHERE e.id_curso = ?
-    GROUP BY e.id, e.nombre_equipo, e.estado_presentacion
+    GROUP BY e.id, e.nombre_equipo, e.codigo_equipo, e.estado_presentacion
     ORDER BY e.nombre_equipo ASC
 ";
 $stmt_equipos = $conn->prepare($sql_equipos);
@@ -162,11 +162,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                                             </small>
                                         </div>
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <button type="button" class="btn btn-outline-warning btn-sm"
-                                                    onclick="abrirModalEditarEquipo(<?php echo $equipo['id']; ?>, <?php echo json_encode($equipo['nombre_equipo']); ?>)"
-                                                    title="Editar equipo">
-                                                Editar
-                                            </button>
+                                            <a href="editar_equipo.php?id_equipo=<?php echo $equipo['id']; ?>" class="btn btn-outline-warning btn-sm" title="Editar equipo">Editar</a>
                                             <button type="button" class="btn btn-outline-danger btn-sm" 
                                                     onclick="confirmarEliminarEquipo(<?php echo $equipo['id']; ?>, '<?php echo htmlspecialchars($equipo['nombre_equipo'], ENT_QUOTES); ?>')"
                                                     title="Eliminar equipo">
@@ -197,6 +193,10 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                 <form action="equipos_actions.php" method="POST">
                     <input type="hidden" name="action" value="create">
                     <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="codigo_equipo_nuevo" class="form-label">ID del Equipo</label>
+                            <input type="text" class="form-control" id="codigo_equipo_nuevo" name="codigo_equipo" required>
+                        </div>
                         <div class="mb-3">
                             <label for="nombre_equipo_nuevo" class="form-label">Nombre del Equipo</label>
                             <input type="text" class="form-control" id="nombre_equipo_nuevo" name="nombre_equipo" required>
@@ -232,75 +232,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
         </div>
     </div>
 
-    <!-- Modal: Editar Equipo -->
-    <div class="modal fade" id="modalEditarEquipo" tabindex="-1" aria-labelledby="modalEditarEquipoLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalEditarEquipoLabel">Editar Equipo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="equipos_actions.php" method="POST">
-                    <input type="hidden" name="action" value="update">
-                    <input type="hidden" name="id_equipo" id="edit_id_equipo">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="nombre_equipo_edit" class="form-label">Nombre del Equipo</label>
-                            <input type="text" class="form-control" id="nombre_equipo_edit" name="nombre_equipo" required>
-                        </div>
-                        <hr>
-                        
-                        <!-- Estudiantes actuales del equipo -->
-                        <h6 class="mb-3">Estudiantes Actuales del Equipo</h6>
-                        <div id="estudiantesActualesContainer" style="max-height: 200px; overflow-y: auto;">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>Email</th>
-                                        <th style="width: 100px;">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tablaEstudiantesActuales">
-                                    <!-- Se llenará dinámicamente -->
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <hr>
-                        
-                        <!-- Agregar nuevos estudiantes -->
-                        <h6 class="mb-3">Agregar Estudiantes al Equipo</h6>
-                        <p class="text-muted small">Selecciona los estudiantes que deseas agregar:</p>
-                        <div style="max-height: 300px; overflow-y: auto;">
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 40px;">
-                                            <input type="checkbox" id="selectAllEditar" title="Seleccionar todos">
-                                        </th>
-                                        <th>Nombre</th>
-                                        <th>Email</th>
-                                        <th>Equipo Actual</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tablaEstudiantesEditar">
-                                    <!-- Se llenará dinámicamente -->
-                                </tbody>
-                            </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-warning">Guardar Cambios</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Formulario oculto para eliminar estudiante de equipo -->
     <form id="formEliminarEstudianteEquipo" action="equipos_actions.php" method="POST" style="display: none;">
@@ -377,9 +309,14 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
         }
 
         // Función para abrir modal de editar equipo
-        function abrirModalEditarEquipo(id, nombre) {
+        function abrirModalEditarEquipo(button) {
+            const id = button.getAttribute('data-id');
+            const nombre = button.getAttribute('data-nombre');
+            const codigo = button.getAttribute('data-codigo');
+
             idEquipoEditando = id;
             document.getElementById('edit_id_equipo').value = id;
+            document.getElementById('codigo_equipo_edit').value = codigo;
             document.getElementById('nombre_equipo_edit').value = nombre;
             
             // Cargar estudiantes actuales del equipo

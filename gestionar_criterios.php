@@ -565,6 +565,16 @@ $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success']) 
                             <textarea class="form-control" name="descripcion" id="descripcion_criterio" rows="3" required></textarea>
                         </div>
                         <div class="mb-3">
+                            <label for="puntaje_maximo_criterio" class="form-label">Puntaje Máximo</label>
+                            <input type="number" class="form-control" name="puntaje_maximo" id="puntaje_maximo_criterio" min="1" value="5" required>
+                            <small class="text-muted">Puntaje máximo que puede obtener este criterio</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="ponderacion_criterio" class="form-label">Ponderación (%)</label>
+                            <input type="number" class="form-control" name="ponderacion" id="ponderacion_criterio" min="0" max="100" step="0.01" value="1.00" required>
+                            <small class="text-muted">Peso del criterio en la evaluación (0-100%)</small>
+                        </div>
+                        <div class="mb-3">
                             <label for="orden_criterio" class="form-label">Orden</label>
                             <input type="number" class="form-control" name="orden" id="orden_criterio" value="100" required>
                             <small class="text-muted">Número menor aparece primero</small>

@@ -203,7 +203,15 @@ if ($tiempo_restante_en_segundos <= 0) {
                             <?php foreach ($criterios as $criterio): ?>
                                 <tr>
                                     <td class="criterio-cell">
-                                        <strong><?php echo htmlspecialchars($criterio['descripcion']); ?></strong>
+                                        <?php
+                                        $parts = explode(':', $criterio['descripcion'], 2);
+                                        $name = trim($parts[0]);
+                                        $description = isset($parts[1]) ? trim($parts[1]) : '';
+                                        ?>
+                                        <strong><?php echo htmlspecialchars($name); ?></strong>
+                                        <?php if (!empty($description)): ?>
+                                            <br><small><?php echo htmlspecialchars($description); ?></small>
+                                        <?php endif; ?>
                                     </td>
                                     <?php if (empty($opciones)): ?>
                                         <td class="text-center text-muted">-</td>

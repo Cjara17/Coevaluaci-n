@@ -314,7 +314,30 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                         <form action="admin_actions.php" method="POST" class="d-inline">
                             <input type="hidden" name="action" value="reset_all">
                             <input type="hidden" name="confirm" value="yes">
-                            <button type="submit" class="btn btn-danger">Confirmar Reseteo Total</button>
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que deseas resetear toda la plataforma? Esta acción eliminará todos los datos del curso activo y no se puede deshacer.')">Confirmar Reseteo Total</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="eliminarEvaluacionModal" tabindex="-1" aria-labelledby="eliminarEvaluacionModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="eliminarEvaluacionModalLabel">Confirmar eliminación de evaluación</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-danger fw-bold">ADVERTENCIA: Esta acción es irreversible.</p>
+                        <p>¿Estás seguro de que deseas eliminar la evaluación "<span id="evaluacion-nombre"></span>"? Esta acción eliminará la evaluación y todos sus datos asociados.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <form action="admin_actions.php" method="POST" class="d-inline">
+                            <input type="hidden" name="action" value="eliminar_evaluacion">
+                            <input type="hidden" name="id_evaluacion" id="eliminar-id-evaluacion">
+                            <button type="submit" class="btn btn-danger">Confirmar Eliminación</button>
                         </form>
                     </div>
                 </div>
@@ -582,8 +605,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                                     <form action="evaluaciones_actions.php" method="POST" class="d-inline">
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="id_evaluacion" value="<?php echo $evaluacion['id']; ?>">
-                                        <button type="submit" class="btn btn-danger btn-sm" 
-                                                onclick="return confirm('¿Estás seguro de eliminar esta evaluación?')">
+                                        <button type="submit" class="btn btn-danger btn-sm">
                                             Eliminar
                                         </button>
                                     </form>
@@ -604,6 +626,9 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                                     </form>
                                 <?php else: ?>
                                     <a href="ver_evaluacion.php?id=<?php echo $evaluacion['id']; ?>" class="btn btn-info btn-sm">Ver Resultados</a>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#eliminarEvaluacionModal" data-id="<?php echo $evaluacion['id']; ?>" data-nombre="<?php echo htmlspecialchars($evaluacion['nombre_evaluacion']); ?>">
+                                        Eliminar
+                                    </button>
                                 <?php endif; ?>
                             </div>
                         </td>
@@ -804,7 +829,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" form="form-delete" class="btn btn-danger fw-bold">Eliminar</button>
+                    <button type="submit" form="form-delete" class="btn btn-danger fw-bold" onclick="return confirm('¿Estás seguro de que quieres eliminar este elemento? No se puede deshacer.')">Eliminar</button>
                 </div>
             </div>
         </div>
@@ -1006,14 +1031,15 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                         
                         <!-- Docentes -->
                         <h6>Docentes del curso</h6>
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Email</th>
-                                    <th>Ponderación (%)</th>
-                                </tr>
-                            </thead>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Email</th>
+                                        <th>Ponderación (%)</th>
+                                    </tr>
+                                </thead>
                             <tbody>
                                 <?php
                                 $sql_docentes_actuales = "
@@ -1041,6 +1067,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                                 ?>
                             </tbody>
                         </table>
+                        </div>
                         <hr>
                         
                         <!-- Invitados (se agregan automáticamente) -->
@@ -1110,7 +1137,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                             
                             // Auto-agregar invitados que no estén en el curso
                             if ($result_invitados_todos->num_rows > 0) {
-                                echo "<table class='table table-sm'>";
+                                echo "<div class='table-responsive'><table class='table table-sm'>";
                                 echo "<thead><tr><th>Nombre</th><th>Email</th><th>Ponderación (%)</th></tr></thead>";
                                 echo "<tbody>";
                                 while ($invitado = $result_invitados_todos->fetch_assoc()) {
@@ -1133,7 +1160,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                                         </td>
                                     </tr>";
                                 }
-                                echo "</tbody></table>";
+                                echo "</tbody></table></div>";
                             } else {
                                 echo "<p class='text-muted'>No hay invitados registrados en el sistema.</p>";
                             }
@@ -1193,6 +1220,17 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                 document.getElementById('delete-action').value = 'delete';
                 document.getElementById('delete-id').value = id;
                 document.getElementById('delete-id').name = (type === 'criterio') ? 'id_criterio' : 'id';
+            });
+
+            // Manejar modal de eliminar evaluación
+            var eliminarEvaluacionModal = document.getElementById('eliminarEvaluacionModal');
+            eliminarEvaluacionModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var id = button.getAttribute('data-id');
+                var nombre = button.getAttribute('data-nombre');
+
+                document.getElementById('eliminar-id-evaluacion').value = id;
+                document.getElementById('evaluacion-nombre').textContent = nombre;
             });
         });
     </script>

@@ -134,10 +134,10 @@ include 'header.php';
                             </tr>
                         </thead>
                         <tbody>
-                            <?php 
+                            <?php
                             // Mostrar equipos activos
-                            if ($equipos_activos->num_rows > 0): 
-                                while ($equipo = $equipos_activos->fetch_assoc()): 
+                            if ($equipos_activos->num_rows > 0):
+                                while ($equipo = $equipos_activos->fetch_assoc()):
                                     $num_eval = contar_evaluaciones($conn, $equipo['id'], false);
                             ?>
                                 <tr>
@@ -150,13 +150,13 @@ include 'header.php';
                                         </a>
                                     </td>
                                 </tr>
-                            <?php 
+                            <?php
                                 endwhile;
                             endif;
-                            
+
                             // Mostrar equipos eliminados
-                            if ($equipos_eliminados->num_rows > 0): 
-                                while ($equipo = $equipos_eliminados->fetch_assoc()): 
+                            if ($equipos_eliminados->num_rows > 0):
+                                while ($equipo = $equipos_eliminados->fetch_assoc()):
                                     $num_eval = contar_evaluaciones($conn, $equipo['id'], false);
                             ?>
                                 <tr class="table-secondary">
@@ -169,10 +169,10 @@ include 'header.php';
                                         </a>
                                     </td>
                                 </tr>
-                            <?php 
+                            <?php
                                 endwhile;
                             endif;
-                            
+
                             if ($equipos_activos->num_rows == 0 && $equipos_eliminados->num_rows == 0):
                             ?>
                                 <tr>

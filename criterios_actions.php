@@ -33,10 +33,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
             $descripcion = trim($_POST['descripcion']);
             $orden = (int)$_POST['orden'];
             $puntaje_maximo = isset($_POST['puntaje_maximo']) ? max(1, (int)$_POST['puntaje_maximo']) : 5;
-            $ponderacion = isset($_POST['ponderacion']) ? max(0, (float)$_POST['ponderacion']) : 1.0;
+            $ponderacion = isset($_POST['ponderacion']) ? min(100, max(0, (float)$_POST['ponderacion'])) : 1.0;
 
             if (empty($descripcion)) {
                 redirect("", "La descripción no puede estar vacía.");
+            }
+
+            if ($ponderacion < 0 || $ponderacion > 100) {
+                redirect("", "La ponderación debe estar entre 0 y 100%.");
             }
 
             // Inserción, incluyendo el id_curso_activo

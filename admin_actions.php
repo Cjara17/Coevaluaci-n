@@ -413,6 +413,94 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
         $stmt->close();
         exit();
     }
+
+    // --- NUEVA ACCIÓN: ELIMINAR EVALUACIÓN ---
+elseif ($action === 'eliminar_evaluacion') {
+    $id_evaluacion = (int)$_POST['id_evaluacion'];
+
+    if (!$id_curso_activo) {
+        header("Location: dashboard_docente.php?error=" . urlencode("Curso activo no disponible."));
+        exit();
+    }
+
+    // 1) Verificar que la evaluación pertenece al curso activo
+    $stmt_check = $conn->prepare("SELECT nombre_evaluacion FROM evaluaciones WHERE id = ? AND id_curso = ?");
+    $stmt_check->bind_param("ii", $id_evaluacion, $id_curso_activo);
+    $stmt_check->execute();
+    $evaluacion = $stmt_check->get_result()->fetch_assoc();
+    $stmt_check->close();
+
+    if (!$evaluacion) {
+        header("Location: dashboard_docente.php?error=" . urlencode("Evaluación no encontrada o no pertenece al curso activo."));
+        exit();
+    }
+
+    // 2) Obtener todos los equipos evaluados en esta evaluación
+    $stmt_equipos = $conn->prepare("
+        SELECT id_equipo_evaluado 
+        FROM evaluaciones_maestro 
+        WHERE id_curso = ?
+    ");
+    $stmt_equipos->bind_param("i", $id_curso_activo);
+    $stmt_equipos->execute();
+    $result_equipos = $stmt_equipos->get_result();
+    $equipos_evaluados = [];
+    while ($row = $result_equipos->fetch_assoc()) {
+        $equipos_evaluados[] = $row['id_equipo_evaluado'];
+    }
+    $stmt_equipos->close();
+
+    // 3) Iniciar transacción
+    $conn->begin_transaction();
+    try {
+        $user_id = $_SESSION['id_usuario'];
+        $now = date('Y-m-d H:i:s');
+
+        // 4) Eliminar datos de evaluaciones_detalle
+        $stmt_detalle = $conn->prepare("DELETE FROM evaluaciones_detalle WHERE id_evaluacion = ?");
+        $stmt_detalle->bind_param("i", $id_evaluacion);
+        $stmt_detalle->execute();
+        $stmt_detalle->close();
+
+        // 5) Eliminar datos en evaluaciones_maestro
+        if (!empty($equipos_evaluados)) {
+            $stmt_maestro = $conn->prepare("
+                DELETE FROM evaluaciones_maestro 
+                WHERE id_curso = ? AND id_equipo_evaluado = ?
+            ");
+
+            foreach ($equipos_evaluados as $id_equipo) {
+                $stmt_maestro->bind_param("ii", $id_curso_activo, $id_equipo);
+                $stmt_maestro->execute();
+            }
+
+            $stmt_maestro->close();
+        }
+
+        // 6) Eliminar la evaluación principal
+        $stmt_evaluacion = $conn->prepare("DELETE FROM evaluaciones WHERE id = ?");
+        $stmt_evaluacion->bind_param("i", $id_evaluacion);
+        $stmt_evaluacion->execute();
+        $stmt_evaluacion->close();
+
+        // 7) Registrar log de eliminación
+        $detalle = "Eliminó la evaluación '" . $evaluacion['nombre_evaluacion'] . "' (ID: $id_evaluacion) y todos sus datos asociados";
+        $log = $conn->prepare("INSERT INTO logs (id_usuario, accion, detalle, fecha) VALUES (?, 'ELIMINAR', ?, ?)");
+        $log->bind_param("iss", $user_id, $detalle, $now);
+        $log->execute();
+        $log->close();
+
+        // 8) Confirmar transacción
+        $conn->commit();
+
+        header("Location: dashboard_docente.php?status=" . urlencode("Evaluación eliminada exitosamente."));
+    } catch (Exception $e) {
+        $conn->rollback();
+        header("Location: dashboard_docente.php?error=" . urlencode("Error al eliminar la evaluación: " . $e->getMessage()));
+    }
+    exit();
+}
+
 }
 
 header("Location: dashboard_docente.php");

@@ -169,7 +169,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : (iss
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" form="form-delete" class="btn btn-danger fw-bold">Eliminar</button>
+                    <button type="submit" form="form-delete" class="btn btn-danger fw-bold" onclick="return confirm('¿Estás seguro de eliminar este curso? Se eliminarán asociaciones pero no datos de estudiantes/equipos/evaluaciones de otros cursos.')">Eliminar</button>
                 </div>
             </div>
         </div>

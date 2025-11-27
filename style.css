@@ -1,5 +1,5 @@
 body {
-  background-color: #048fd4;
+  background-color: #005A8C;
   color: #333;
   height: 100vh; /* asegura que el body ocupe toda la altura de la pantalla */
   margin: 0; /* elimina márgenes predeterminados */
@@ -35,14 +35,14 @@ body.silueta {
 }
 
 .btn-primary {
-  background-color: #0077b6;
+  background-color: #005A8C;
   border: none;
   min-height: 44px; /* Touch target minimum */
   padding: 0.75rem 1.5rem; /* Consistent padding */
 }
 
 .btn-primary:hover {
-  background-color: #023e8a;
+  background-color: #004080;
 }
 
 /* Button groups and flex layouts */
@@ -146,7 +146,7 @@ body.silueta {
 .nota-final {
     font-size: 2rem;
     font-weight: bold;
-    color: #0053a0;
+    color: #005A8C;
     margin-bottom: 20px;
 }
 
@@ -194,5 +194,32 @@ h2 {
     }
     .criterio-item {
         padding: 8px;
+    }
+}
+
+.hidden {
+    display: none;
+}
+
+/* Responsive table improvements */
+@media (max-width: 768px) {
+    .table-responsive {
+        border: none;
+    }
+
+    .table-responsive table {
+        font-size: 0.875rem;
+    }
+
+    .table-responsive th,
+    .table-responsive td {
+        white-space: nowrap;
+        padding: 0.5rem;
+    }
+
+    /* Allow horizontal scroll for tables */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 }
