@@ -32,7 +32,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="dashboard-bg">
     <!-- NUEVO: se eliminó navbar antiguo tras implementación de header institucional UCT -->
 
     <div class="container mt-4">

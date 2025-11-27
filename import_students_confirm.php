@@ -184,7 +184,7 @@ $col_count = count($rows[0]);
         .mapper-section { background: #f8f9fa; padding: 20px; border-radius: 5px; }
     </style>
 </head>
-<body class="p-4">
+<body class="dashboard-bg p-4">
     <div class="container">
         <h1 class="mb-4">Confirmación de Importación</h1>
 

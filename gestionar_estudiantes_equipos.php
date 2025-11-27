@@ -34,12 +34,12 @@ $estudiantes = $stmt_estudiantes->get_result();
 
 // Obtener todos los equipos del curso activo
 $sql_equipos = "
-    SELECT e.id, e.nombre_equipo, e.codigo_equipo, e.estado_presentacion,
+    SELECT e.id, e.codigo_equipo, e.nombre_equipo, e.estado_presentacion,
            COUNT(u.id) as total_estudiantes
     FROM equipos e
     LEFT JOIN usuarios u ON e.id = u.id_equipo
     WHERE e.id_curso = ?
-    GROUP BY e.id, e.nombre_equipo, e.codigo_equipo, e.estado_presentacion
+    GROUP BY e.id, e.codigo_equipo, e.nombre_equipo, e.estado_presentacion
     ORDER BY e.nombre_equipo ASC
 ";
 $stmt_equipos = $conn->prepare($sql_equipos);
@@ -58,7 +58,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
 </head>
-<body style="padding-bottom: 120px;">
+<body class="dashboard-bg" style="padding-bottom: 120px;">
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
@@ -163,7 +163,7 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                                         </div>
                                         <div class="btn-group btn-group-sm" role="group">
                                             <a href="editar_equipo.php?id_equipo=<?php echo $equipo['id']; ?>" class="btn btn-outline-warning btn-sm" title="Editar equipo">Editar</a>
-                                            <button type="button" class="btn btn-outline-danger btn-sm" 
+                                            <button type="button" class="btn btn-outline-danger btn-sm"
                                                     onclick="confirmarEliminarEquipo(<?php echo $equipo['id']; ?>, '<?php echo htmlspecialchars($equipo['nombre_equipo'], ENT_QUOTES); ?>')"
                                                     title="Eliminar equipo">
                                                 Eliminar
@@ -241,6 +241,30 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
         <input type="hidden" name="id_equipo" id="remove_student_equipo">
     </form>
 
+    <!-- Modal: Confirmar Eliminación de Equipo -->
+    <div class="modal fade" id="eliminarEquipoModal" tabindex="-1" aria-labelledby="eliminarEquipoModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="eliminarEquipoModalLabel">Confirmar Eliminación de Equipo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-danger fw-bold">ADVERTENCIA: Esta acción es irreversible.</p>
+                    <p>¿Estás seguro de que deseas eliminar el equipo "<span id="equipo-nombre"></span>"? Esta acción eliminará el equipo y desasignará a todos sus estudiantes.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form action="equipos_actions.php" method="POST" class="d-inline">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="id_equipo" id="eliminar-id-equipo">
+                        <button type="submit" class="btn btn-danger">Confirmar Eliminación</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Formulario oculto para eliminar equipo -->
     <form id="formEliminarEquipo" action="equipos_actions.php" method="POST" style="display: none;">
         <input type="hidden" name="action" value="delete">
@@ -249,6 +273,19 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Manejar modal de eliminar equipo
+            var eliminarEquipoModal = document.getElementById('eliminarEquipoModal');
+            eliminarEquipoModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var id = button.getAttribute('data-id');
+                var nombre = button.getAttribute('data-nombre');
+
+                document.getElementById('eliminar-id-equipo').value = id;
+                document.getElementById('equipo-nombre').textContent = nombre;
+            });
+        });
+
         // Seleccionar todos los estudiantes en la lista principal
         document.getElementById('selectAllEstudiantes')?.addEventListener('change', function() {
             const checkboxes = document.querySelectorAll('.estudiante-checkbox');

@@ -156,7 +156,7 @@ if ($tiempo_restante_en_segundos <= 0) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="dashboard-bg">
     <div class="container mt-5">
         <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between mb-4 gap-3">
             <div>
@@ -297,11 +297,36 @@ if ($tiempo_restante_en_segundos <= 0) {
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
                     const descripcionBtns = document.querySelectorAll('.descripcion-btn');
+                    const submitBtn = document.getElementById('submitBtn');
+
+                    function verificarCompletitud() {
+                        const criterios = document.querySelectorAll('input[type="radio"][name^="criterios["]');
+                        const criteriosIds = new Set();
+                        criterios.forEach(radio => {
+                            const name = radio.name;
+                            const match = name.match(/criterios\[(\d+)\]/);
+                            if (match) {
+                                criteriosIds.add(match[1]);
+                            }
+                        });
+
+                        let todosSeleccionados = true;
+                        criteriosIds.forEach(id => {
+                            const radiosCriterio = document.querySelectorAll(`input[name="criterios[${id}]"]`);
+                            const algunoSeleccionado = Array.from(radiosCriterio).some(radio => radio.checked);
+                            if (!algunoSeleccionado) {
+                                todosSeleccionados = false;
+                            }
+                        });
+
+                        submitBtn.disabled = !todosSeleccionados;
+                    }
+
                     descripcionBtns.forEach(btn => {
                         btn.addEventListener('click', function() {
                             const criterioId = this.getAttribute('data-criterio-id');
                             const opcionId = this.getAttribute('data-opcion-id');
-                            
+
                             // Deseleccionar otros botones del mismo criterio
                             const otrosBtns = document.querySelectorAll(`.descripcion-btn[data-criterio-id="${criterioId}"]`);
                             otrosBtns.forEach(b => {
@@ -309,17 +334,23 @@ if ($tiempo_restante_en_segundos <= 0) {
                                 const radio = document.getElementById(`criterio_${criterioId}_opcion_${b.getAttribute('data-opcion-id')}`);
                                 if (radio) radio.checked = false;
                             });
-                            
+
                             // Seleccionar este botón
                             this.classList.add('selected');
                             const radio = document.getElementById(`criterio_${criterioId}_opcion_${opcionId}`);
                             if (radio) radio.checked = true;
+
+                            // Verificar si todos los criterios están completos
+                            verificarCompletitud();
                         });
                     });
+
+                    // Verificar inicialmente
+                    verificarCompletitud();
                 });
             </script>
             
-            <div class="d-grid gap-2 mt-4"><button type="submit" class="btn btn-primary btn-lg">Enviar Evaluación</button></div>
+            <div class="d-grid gap-2 mt-4"><button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>Enviar Evaluación</button></div>
         </form>
     </div>
 

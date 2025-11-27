@@ -1,5 +1,5 @@
 body {
-  background-color: #005A8C;
+  background-color: #048fd4;
   color: #333;
   height: 100vh; /* asegura que el body ocupe toda la altura de la pantalla */
   margin: 0; /* elimina márgenes predeterminados */
@@ -12,6 +12,23 @@ body.silueta {
   background-position: center;
   background-attachment: fixed;
   background-repeat: no-repeat;
+}
+
+body.dashboard-bg::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('img/fondoAraucarias.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  filter: blur(2px);
+  opacity: 0.6;
+  z-index: -1;
 }
 
 .login-container {
@@ -180,7 +197,7 @@ body.silueta {
 }
 
 h2 {
-    margin-bottom: 15px;
+  margin-bottom: 15px;
 }
 
 @media (max-width: 400px) {

@@ -40,6 +40,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])) {
         case 'reiniciar':
             $nuevo_estado = 'pendiente';
             $mensaje = 'Presentación reiniciada con éxito.';
+            // Eliminar evaluaciones existentes para permitir re-evaluación
+            if ($id_estudiante) {
+                $stmt_delete = $conn->prepare("DELETE FROM evaluaciones_maestro WHERE id_equipo_evaluado = ? AND id_curso = ?");
+                $stmt_delete->bind_param("ii", $id_estudiante, $id_curso_activo);
+                $stmt_delete->execute();
+                $stmt_delete->close();
+            } elseif ($id_equipo) {
+                $stmt_delete = $conn->prepare("DELETE FROM evaluaciones_maestro WHERE id_equipo_evaluado = ? AND id_curso = ?");
+                $stmt_delete->bind_param("ii", $id_equipo, $id_curso_activo);
+                $stmt_delete->execute();
+                $stmt_delete->close();
+            }
             break;
         default:
             // Acción inválida, redirigir sin hacer nada

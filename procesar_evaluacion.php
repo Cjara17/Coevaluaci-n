@@ -337,13 +337,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $resultado = EvaluacionCalculo::calcularCalificacionFinal($id_evaluacion);
         EvaluacionCalculo::guardarCalificacionEnHistorial($id_evaluacion, $resultado["nota_final"]);
 
-        // Pasar datos a sesión para resultado_coevaluacion.php
-        $_SESSION["resultado_nota_final"] = $resultado["nota_final"];
-        $_SESSION["resultado_detalles"] = $resultado["detalles"];
-        $_SESSION["resultado_detalles_globales"] = $resultado;
-
-        // Redirigir a resultado_coevaluacion.php
-        header("Location: resultado_coevaluacion.php");
+        // Redirigir según el rol del usuario
+        if ($_SESSION['es_docente']) {
+            // Los docentes ven el resultado de su evaluación
+            $_SESSION["resultado_nota_final"] = $resultado["nota_final"];
+            $_SESSION["resultado_detalles"] = $resultado["detalles"];
+            $_SESSION["resultado_detalles_globales"] = $resultado;
+            header("Location: resultado_coevaluacion.php");
+        } else {
+            // Los estudiantes solo ven un mensaje de éxito en el dashboard
+            header("Location: dashboard_estudiante.php?status=" . urlencode("Tu evaluación ha sido enviada con éxito."));
+        }
         exit();
 
     } catch (Exception $e) {

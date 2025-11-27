@@ -216,6 +216,7 @@ $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success']) 
 <head>
     <meta charset="UTF-8">
     <title>Criterios y Escala de Notas</title>
+    <link rel="icon" href="img/favicon.ico" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="public/assets/css/min/gestionar_criterios.min.css" />
@@ -317,7 +318,7 @@ $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success']) 
         }
     </style>
 </head>
-<body>
+<body class="dashboard-bg">
     <div class="container mt-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
@@ -354,25 +355,25 @@ $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success']) 
             <h3>Rúbrica de Evaluación</h3>
             <div>
                 <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAgregarCriterio">
-                    + Agregar Criterio
+                    Agregar Criterio
                 </button>
                 <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modalAgregarOpcion">
-                    + Agregar Opción
-                </button>
-                <button type="button" class="btn btn-warning" onclick="guardarTodosLosCambios()" id="btnGuardarCambios">
-                    💾 Guardar Cambios
+                    Agregar Opción
                 </button>
                 <a href="exportar_rubrica.php?id_curso=<?php echo $id_curso_activo; ?>" class="btn btn-primary">
-                    📊 Exportar a Excel
+                    Exportar a Excel
                 </a>
                 <a href="exportar_rubrica_pdf.php?id_curso=<?php echo $id_curso_activo; ?>" class="btn btn-danger" target="_blank">
-                    📄 Exportar a PDF
+                    Exportar a PDF
                 </a>
                 <a href="exportar_rubrica_csv.php?id_curso=<?php echo $id_curso_activo; ?>" class="btn btn-secondary">
-                    📋 Exportar a CSV
+                    Exportar a CSV
                 </a>
                 <button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalImportarRubrica">
-                    📥 Importar desde CSV
+                    Importar desde CSV
+                </button>
+                <button type="button" class="btn btn-warning" onclick="guardarTodosLosCambios()" id="btnGuardarCambios">
+                    Guardar Cambios
                 </button>
             </div>
         </div>

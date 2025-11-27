@@ -243,11 +243,12 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
 <head>
     <meta charset="UTF-8">
     <title>Dashboard Docente - Coevaluación</title>
+    <link rel="icon" href="img/favicon.ico" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="public/assets/css/dashboard_buttons.css">
 </head>
-<body style="padding-bottom: 120px;">
+<body class="dashboard-bg" style="padding-bottom: 120px;">
     <?php include 'header.php'; ?>
 
     <div class="container mt-5">
@@ -313,7 +314,7 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                     </div>
                     <div class="modal-body">
                         <p class="text-danger fw-bold">ADVERTENCIA: Esta acción es irreversible.</p>
-                        <p>Al confirmar, se eliminarán todos los datos (equipos, estudiantes, evaluaciones, criterios) asociados al **curso activo**.</p>
+                        <p>Al confirmar, se eliminarán todos los datos (equipos, estudiantes, evaluaciones, criterios) asociados al curso activo.</p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -360,7 +361,6 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                         <?php
                         $zipDisponible = extension_loaded('zip') && class_exists('ZipArchive');
                         ?>
-                        <p><strong>Formato requerido:</strong> ID, Nombre, Email</p>
                         <p class="small text-muted">Soporta archivos <strong>CSV (.csv)</strong><?php echo $zipDisponible ? ' y <strong>Excel (.xlsx)</strong>' : ''; ?>. Los estudiantes se asociarán automáticamente al curso activo.</p>
                         <?php if (!$zipDisponible): ?>
                             <div class="alert alert-warning mb-3">
@@ -375,45 +375,10 @@ $invite_error = isset($_GET['invite_error']) ? htmlspecialchars($_GET['invite_er
                             </div>
                             <button type="submit" class="btn btn-success w-100 fw-bold">Importar Estudiantes</button>
                         </form>
-                        <hr>
-                        <p class="text-muted small"><strong>Ejemplo (CSV):</strong></p>
-                        <pre class="bg-light p-2 small">ID,Nombre,Email
-20201234,Juan Pérez,jperez@alu.uct.cl
-20204567,Ana Gómez,agomez@alu.uct.cl</pre>
+
                     </div>
-                </div>
             </div>
-            <div class="col-md-6">
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Gestión de Estudiantes y Equipos</h5>
-                    </div>
-                    <div class="card-body">
-                        <?php
-                        $zipDisponible = extension_loaded('zip') && class_exists('ZipArchive');
-                        ?>
-                        <p>Sube un archivo <strong>CSV</strong><?php echo $zipDisponible ? ' o <strong>Excel (.xlsx)</strong>' : ''; ?> con la lista de estudiantes y su equipo.</p>
-                        <?php if (!$zipDisponible): ?>
-                            <div class="alert alert-warning mb-3">
-                                <strong>⚠️ Nota:</strong> Los archivos Excel (.xlsx) no están disponibles porque la extensión ZipArchive no está habilitada.
-                                Por favor, use archivos <strong>CSV</strong> o <a href="verificar_zip.php" target="_blank">habilite ZipArchive</a>.
-                            </div>
-                        <?php endif; ?>
-                        <form action="upload.php" method="POST" enctype="multipart/form-data">
-                            <div class="mb-3">
-                                <label for="lista_estudiantes" class="form-label">Archivo CSV<?php echo $zipDisponible ? ' o Excel' : ''; ?> (Nombre, Email, Equipo)</label>
-                                <input class="form-control" type="file" id="lista_estudiantes" name="lista_estudiantes" accept="<?php echo $zipDisponible ? '.csv,.xlsx' : '.csv'; ?>" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">Subir y Procesar Lista</button>
-                        </form>
-                        <hr>
-                        <p class="text-muted small">
-                            Orden de columnas esperado: <strong>Nombre, Correo institucional y Equipo</strong>. Ejemplo:
-                            <br><code>Juan Perez,jperez@alu.uct.cl,Los Vengadores</code>
-                        </p>
-                    </div>
-                </div>
-            </div>
+        </div>
 
             <div class="col-md-6">
                  <div class="card shadow h-100">

@@ -70,10 +70,11 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : (iss
 <head>
     <meta charset="UTF-8">
     <title>Seleccionar Curso</title>
+    <link rel="icon" href="img/favicon.ico" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="dashboard-bg">
     <?php
     // NUEVO: header global institucional UCT
     $page_title = "Panel Docente"; include 'header.php';

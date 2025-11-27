@@ -201,10 +201,11 @@ include 'header.php';
 <head>
     <meta charset="UTF-8">
     <title><?php echo htmlspecialchars($nombre_evaluacion); ?> - <?php echo htmlspecialchars($curso_activo['nombre_curso']); ?></title>
+    <link rel="icon" href="img/favicon.ico" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="dashboard-bg">
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>

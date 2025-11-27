@@ -133,11 +133,13 @@ CREATE TABLE `criterios` (
 -- ========================================
 CREATE TABLE `equipos` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `codigo_equipo` varchar(100) NOT NULL,
   `nombre_equipo` varchar(100) NOT NULL,
   `estado_presentacion` varchar(20) NOT NULL DEFAULT 'pendiente',
   `id_curso` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_curso_equipo` (`id_curso`,`nombre_equipo`),
+  UNIQUE KEY `idx_curso_codigo` (`id_curso`,`codigo_equipo`),
   KEY `id_curso` (`id_curso`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -270,7 +272,7 @@ CREATE TABLE `logs` (
 -- DATOS DE PRUEBA
 -- ========================================
 INSERT INTO `usuarios` (`nombre`, `email`, `es_docente`, `password`)
-VALUES ('Docente Prueba', 'docente@uct.cl', 1, '$2y$10$5RFvZl7w.zP5YL7KDH.cTu0Jq6kU4kDH8Qj4qK3L9Q2M6N7O8P9Q');
+VALUES ('Docente Prueba', 'docente@uct.cl', 1, '$2a$12$wpbu5ibsWAss43nP5CEakuXNHux1iYyj74lCHTNebp9HpenuMZlym');
 
 INSERT INTO `cursos` (`nombre_curso`, `semestre`, `anio`) 
 VALUES ('Programación I', '2025-1', 2025);
@@ -278,8 +280,8 @@ VALUES ('Programación I', '2025-1', 2025);
 INSERT INTO `docente_curso` (`id_docente`, `id_curso`, `ponderacion`) 
 VALUES (1, 1, 1.00);
 
-INSERT INTO `equipos` (`nombre_equipo`, `estado_presentacion`, `id_curso`) 
-VALUES ('Equipo A', 'pendiente', 1);
+INSERT INTO `equipos` (`codigo_equipo`, `nombre_equipo`, `estado_presentacion`, `id_curso`) 
+VALUES ('EQ-001', 'Equipo A', 'pendiente', 1);
 
 INSERT INTO `criterios` (`descripcion`, `orden`, `activo`, `id_curso`) 
 VALUES ('Presentación', 1, 1, 1);

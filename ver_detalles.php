@@ -256,7 +256,7 @@ $stmt_eval_cual->close();
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="public/assets/css/min/ver_detalles.min.css" />
 </head>
-<body>
+<body class="dashboard-bg">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="dashboard_docente.php">

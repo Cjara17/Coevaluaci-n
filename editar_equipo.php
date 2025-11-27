@@ -47,14 +47,13 @@ $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
 </head>
-<body style="padding-bottom: 120px;">
+<body class="dashboard-bg" style="padding-bottom: 120px;">
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1>Editar Equipo</h1>
                 <p class="text-muted mb-0">Curso: <strong><?php echo htmlspecialchars($curso_activo['nombre_curso'] . ' ' . $curso_activo['semestre'] . '-' . $curso_activo['anio']); ?></strong></p>
             </div>
-            <a href="gestionar_estudiantes_equipos.php" class="btn btn-secondary">← Volver</a>
         </div>
 
         <?php if ($status_message): ?>
