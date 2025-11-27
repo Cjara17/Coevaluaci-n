@@ -4,6 +4,12 @@ require_once __DIR__ . '/invite_helpers.php';
 // Requerir ser docente Y tener un curso activo
 verificar_sesion(true);
 
+// Verificar que sea docente, si no, redirigir al dashboard de estudiante
+if (!isset($_SESSION['es_docente']) || !$_SESSION['es_docente']) {
+    header("Location: dashboard_estudiante.php");
+    exit();
+}
+
 // Función helper para limpiar nombres de invitados (remover prefijo "invitado")
 function limpiar_nombre_invitado($nombre) {
     if (empty($nombre)) return $nombre;

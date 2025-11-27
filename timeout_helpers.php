@@ -14,7 +14,7 @@
  * @return array Retorna array con 'expirado' (bool), 'tiempo_restante_segundos' (int), 'fin_temporizador' (string)
  */
 function verificar_timeout($conn, $id_evaluacion) {
-    $stmt = $conn->prepare("SELECT fin_temporizador, finalizado_por_tiempo FROM evaluaciones_maestro WHERE id = ?");
+    $stmt = $conn->prepare("SELECT fin_temporizador, finalizado_por_tiempo, inicio_temporizador, id_curso FROM evaluaciones_maestro WHERE id = ?");
     $stmt->bind_param("i", $id_evaluacion);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -27,21 +27,47 @@ function verificar_timeout($conn, $id_evaluacion) {
 
     $fin_temporizador = $evaluacion['fin_temporizador'];
     $finalizado_por_tiempo = $evaluacion['finalizado_por_tiempo'];
+    $inicio_temporizador = $evaluacion['inicio_temporizador'];
+    $id_curso = $evaluacion['id_curso'];
 
     if ($finalizado_por_tiempo) {
         // Ya está finalizado por tiempo
         return ['expirado' => true, 'tiempo_restante_segundos' => 0, 'fin_temporizador' => $fin_temporizador];
     }
 
-    if (!$fin_temporizador) {
-        // No hay temporizador configurado
-        return ['expirado' => false, 'tiempo_restante_segundos' => null, 'fin_temporizador' => null];
-    }
-
     $now = new DateTime();
-    $fin = new DateTime($fin_temporizador);
-    $expirado = $now >= $fin;
-    $tiempo_restante = $expirado ? 0 : $now->diff($fin)->s + ($now->diff($fin)->i * 60) + ($now->diff($fin)->h * 3600);
+
+    if ($fin_temporizador) {
+        // Si hay fin_temporizador configurado, usar ese
+        $fin = new DateTime($fin_temporizador);
+        $expirado = $now >= $fin;
+        $tiempo_restante = $expirado ? 0 : $now->diff($fin)->s + ($now->diff($fin)->i * 60) + ($now->diff($fin)->h * 3600);
+    } elseif ($inicio_temporizador) {
+        // Si no hay fin_temporizador pero sí inicio_temporizador, calcular usando duración del curso
+        $stmt_duracion = $conn->prepare("SELECT duracion_minutos FROM cursos WHERE id = ?");
+        $stmt_duracion->bind_param("i", $id_curso);
+        $stmt_duracion->execute();
+        $duracion_result = $stmt_duracion->get_result();
+        $duracion_minutos = $duracion_result->fetch_assoc()['duracion_minutos'] ?? null;
+        $stmt_duracion->close();
+
+        if ($duracion_minutos && $duracion_minutos > 0) {
+            $inicio = new DateTime($inicio_temporizador);
+            $fin = clone $inicio;
+            $fin->modify("+{$duracion_minutos} minutes");
+            $expirado = $now >= $fin;
+            $tiempo_restante = $expirado ? 0 : $now->diff($fin)->s + ($now->diff($fin)->i * 60) + ($now->diff($fin)->h * 3600);
+            $fin_temporizador = $fin->format('Y-m-d H:i:s');
+        } else {
+            // No hay duración configurada
+            $expirado = false;
+            $tiempo_restante = null;
+        }
+    } else {
+        // No hay temporizador configurado
+        $expirado = false;
+        $tiempo_restante = null;
+    }
 
     return [
         'expirado' => $expirado,

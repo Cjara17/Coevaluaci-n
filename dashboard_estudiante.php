@@ -21,6 +21,12 @@
 require 'db.php';
 verificar_sesion(false); // Solo para estudiantes
 
+// Verificar que sea estudiante, si no, redirigir al dashboard de docente
+if (isset($_SESSION['es_docente']) && $_SESSION['es_docente']) {
+    header("Location: dashboard_docente.php");
+    exit();
+}
+
 $id_usuario_actual = $_SESSION['id_usuario'];
 $id_equipo_usuario = $_SESSION['id_equipo'];
 $id_curso_activo = $_SESSION['id_curso_activo'] ?? null;
