@@ -41,6 +41,9 @@ $dbname = $_ENV['DB_NAME'] ?? 'coeval_db';
 // Crear conexión
 $conn = new mysqli($servername, $username, $password, $dbname);
 
+// Establecer charset UTF-8 inmediatamente después de conectar
+$conn->set_charset("utf8mb4");
+
 // Verificar conexión
 if ($conn->connect_error) {
     // Si la conexión falla, forzamos un mensaje de error visible y detenemos el script
