@@ -1,6 +1,10 @@
 <?php
 // NUEVO: se agregó header global institucional UCT
 include 'header.php';
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+$_SESSION['last_activity'] = time();
 require 'db.php';
 // Requerir ser docente Y tener un curso activo
 verificar_sesion(true);
